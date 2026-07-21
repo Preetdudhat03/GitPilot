@@ -17,3 +17,6 @@ dependencies = [
 
 [project.scripts]
 gitpilot = "gitpilot.cli:main"
+
+[tool.setuptools]
+packages = ["gitpilot"]
