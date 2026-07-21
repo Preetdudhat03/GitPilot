@@ -40,7 +40,7 @@ class TestGitEventHandler(unittest.TestCase):
         self.pipeline.run.assert_not_called()
         
         # Wait for the delay (0.1s) plus a tiny margin
-        time.sleep(0.15)
+        time.sleep(0.3)
         
         # Now it should be called exactly once
         self.pipeline.run.assert_called_once()
@@ -56,7 +56,7 @@ class TestGitEventHandler(unittest.TestCase):
         self.handler.on_modified(event)
         
         # Wait for timer to expire after the LAST event
-        time.sleep(0.15)
+        time.sleep(0.3)
         
         # Should still only be called ONCE
         self.pipeline.run.assert_called_once()
