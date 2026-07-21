@@ -1,7 +1,6 @@
 import logging
 import sys
 
-# Define ANSI color codes for terminal output
 class Colors:
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -10,6 +9,18 @@ class Colors:
     SUCCESS = "\033[92m"    # Green
     WARNING = "\033[93m"    # Yellow
     ERROR = "\033[91m"      # Red
+
+def _supports_unicode() -> bool:
+    if sys.platform != "win32":
+        return True
+    if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding:
+        return sys.stdout.encoding.lower() == "utf-8"
+    return False
+
+SUPPORTS_UNICODE = _supports_unicode()
+WARN_SYMBOL = "⚠️" if SUPPORTS_UNICODE else "[!]"
+ERROR_SYMBOL = "✖" if SUPPORTS_UNICODE else "[X]"
+SUCCESS_SYMBOL = "✓" if SUPPORTS_UNICODE else "[OK]"
 
 class GitPilotFormatter(logging.Formatter):
     """Custom logging formatter to provide colored output without cluttered stack traces."""
@@ -26,10 +37,10 @@ class GitPilotFormatter(logging.Formatter):
             color = "" 
         elif record.levelno == logging.WARNING:
             color = Colors.WARNING
-            record.levelname = f"⚠️ WARNING:"
+            record.levelname = f"{WARN_SYMBOL} WARNING:"
         elif record.levelno >= logging.ERROR:
             color = Colors.ERROR
-            record.levelname = f"✖ ERROR:"
+            record.levelname = f"{ERROR_SYMBOL} ERROR:"
         else:
             color = ""
 
@@ -79,4 +90,4 @@ def setup_logger(verbose: bool = False) -> logging.Logger:
 def print_success(message: str):
     """Helper function to print success messages cleanly (e.g. with a checkmark)."""
     logger = logging.getLogger("gitpilot")
-    logger.info(f"{Colors.SUCCESS}✓ {message}{Colors.RESET}")
+    logger.info(f"{Colors.SUCCESS}{SUCCESS_SYMBOL} {message}{Colors.RESET}")

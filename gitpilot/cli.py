@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from gitpilot.config import ConfigManager
-from gitpilot.logger import setup_logger
+from gitpilot.logger import setup_logger, SUCCESS_SYMBOL
 from gitpilot.git_manager import GitManager, GitError
 from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import RuleBasedCommitGenerator
@@ -64,10 +64,10 @@ def cmd_watch(args, repo_path: Path):
         sys.exit(1)
         
     print_banner()
-    logger.info(f"✓ Repository detected")
-    logger.info(f"✓ Watching branch: {pipeline.git.get_current_branch()}")
-    logger.info(f"✓ Remote: {pipeline.config.remote}")
-    logger.info(f"✓ Auto-push: {'enabled' if pipeline.config.auto_push else 'disabled'}")
+    logger.info(f"{SUCCESS_SYMBOL} Repository detected")
+    logger.info(f"{SUCCESS_SYMBOL} Watching branch: {pipeline.git.get_current_branch()}")
+    logger.info(f"{SUCCESS_SYMBOL} Remote: {pipeline.config.remote}")
+    logger.info(f"{SUCCESS_SYMBOL} Auto-push: {'enabled' if pipeline.config.auto_push else 'disabled'}")
     
     if args.dry_run:
         logger.warning("DRY RUN MODE ENABLED. No changes will be committed.")
@@ -106,7 +106,7 @@ def cmd_push(args, repo_path: Path):
     
     try:
         git.push(config.remote, branch)
-        logger.info("✓ Push successful.")
+        logger.info(f"{SUCCESS_SYMBOL} Push successful.")
     except GitError as e:
         logger.error(f"Push failed: {e}")
         sys.exit(1)
