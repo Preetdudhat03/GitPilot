@@ -1,1 +1,22 @@
-t
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitpilot"
+version = "0.1.0"
+description = "A developer productivity CLI tool that safely automates git commits and pushes."
+authors = [
+    {name = "Preet Dudha", email = "learner@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "watchdog>=3.0.0"
+]
+
+[project.scripts]
+gitpilot = "gitpilot.cli:main"
+
+[tool.setuptools]
+packages = ["gitpilot"]
