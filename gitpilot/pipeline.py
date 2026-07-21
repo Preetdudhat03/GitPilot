@@ -39,11 +39,10 @@ class GitPilotPipeline:
         Returns:
             True if a commit was successfully created (or would have been in dry_run), False otherwise.
         """
-        # Try to acquire the lock. If it's already held, we just return False and let the watcher try again later.
-        if not self._lock.acquire(blocking=False):
-            logger.warning("Pipeline is already running. Skipping this trigger.")
-            return False
-            
+        # Acquire the lock. If already held by a running pipeline, this will block and queue the execution.
+        # This ensures that any changes occurring while a commit/push is active are not lost.
+        logger.debug("Acquiring pipeline lock...")
+        self._lock.acquire()
         try:
             return self._run_internal(dry_run, manual_push)
         except Exception as e:
