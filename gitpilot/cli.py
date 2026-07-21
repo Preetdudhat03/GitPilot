@@ -12,7 +12,7 @@ from gitpilot.pipeline import GitPilotPipeline
 from gitpilot.watcher import GitPilotWatcher
 
 def print_banner():
-    banner = """
+    banner = r"""
    _____ _ _  _____  _ _       _   
   / ____(_) ||  __ \(_) |     | |  
  | |  __ _| || |__) |_| | ___ | |_ 
