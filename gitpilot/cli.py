@@ -213,10 +213,19 @@ Detailed Command Reference:
 
   config <key> [value]
     Gets or sets a configuration value directly in the 'gitpilot.json' file.
-    Arguments:
-      key         The setting to change (e.g., auto_push, delay, branch, remote)
-      value       The new value. If omitted, it prints the current value.
-                  Example: gitpilot config auto_push true
+    If [value] is omitted, it prints the current value of the <key>.
+    
+    Available Keys:
+      branch            (string)  The default branch to watch and push to (e.g., main)
+      remote            (string)  The remote repository name to push to (e.g., origin)
+      watch             (boolean) Whether watching is enabled globally (true/false)
+      delay             (integer) Inactivity delay in seconds before committing
+      auto_push         (boolean) Automatically push to remote after committing (true/false)
+      max_file_size_mb  (integer) Blocks staging files larger than this size in MB
+      
+    Example: 
+      gitpilot config delay 60
+      gitpilot config auto_push true
 """
     parser = argparse.ArgumentParser(
         description="GitPilot: A safe automated git commit watcher.",
