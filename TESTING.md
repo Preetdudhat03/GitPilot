@@ -163,4 +163,3 @@ Remove-Item -Recurse -Force gitpilot-test-repo
 # On macOS/Linux:
 rm -rf gitpilot-test-repo
 ```
-.
