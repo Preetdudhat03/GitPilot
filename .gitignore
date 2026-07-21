@@ -37,3 +37,6 @@ venv.bak/
 
 # GitPilot specifically generated files (but NOT gitpilot.json, let the user decide!)
 gitpilot.log
+
+
+testrepo/
