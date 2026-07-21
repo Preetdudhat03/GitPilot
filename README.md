@@ -45,17 +45,45 @@ gitpilot init
 gitpilot watch
 ```
 
-## CLI Commands
+## CLI Commands & Parameters
 
-- `gitpilot init`: Creates a `gitpilot.json` config file.
-- `gitpilot watch`: Starts the background file watcher.
-- `gitpilot watch --dry-run`: Runs the watcher, but simulates commits and prints the output instead of executing git operations.
-- `gitpilot commit`: Manually triggers the safe commit pipeline immediately.
-- `gitpilot commit --push`: Commits and then pushes to the remote.
-- `gitpilot push`: Manually pushes local commits.
-- `gitpilot status`: Prints the current configuration and repository status.
+GitPilot uses a simple command structure: `gitpilot [global parameters] <command> [command parameters]`
 
-*(Add `-v` or `--verbose` to any command for debugging output).*
+### Global Parameters
+Available on all commands:
+| Parameter | Short | Description |
+| :--- | :--- | :--- |
+| `--verbose` | `-v` | Enables detailed debug logging for troubleshooting. |
+| `--help` | `-h` | Displays the help manual and available arguments. |
+
+### Commands
+
+#### `init`
+Creates the `gitpilot.json` configuration file in the current directory.
+- **Usage:** `gitpilot init`
+- **Parameters:** None
+
+#### `watch`
+Starts the background file system watcher. It will automatically commit changes after the configured delay.
+- **Usage:** `gitpilot watch [parameters]`
+- **Parameters:**
+  - `--dry-run`: Simulates the watcher and pipeline without actually executing any Git commands. Excellent for testing your safety rules and commit generation.
+
+#### `commit`
+Manually triggers the safe commit pipeline exactly once.
+- **Usage:** `gitpilot commit [parameters]`
+- **Parameters:**
+  - `--push`: Overrides the `auto_push` configuration to forcefully push the commit to the remote repository if the commit is successful.
+
+#### `push`
+Manually pushes existing local commits to the configured remote branch.
+- **Usage:** `gitpilot push`
+- **Parameters:** None
+
+#### `status`
+Displays the current GitPilot configuration, repository health, and uncommitted file count.
+- **Usage:** `gitpilot status`
+- **Parameters:** None
 
 ## Configuration
 
