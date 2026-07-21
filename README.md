@@ -85,6 +85,14 @@ Displays the current GitPilot configuration, repository health, and uncommitted 
 - **Usage:** `gitpilot status`
 - **Parameters:** None
 
+#### `config`
+Gets or sets a configuration value directly in the `gitpilot.json` file.
+- **Usage:** `gitpilot config <key> [value]`
+- **Parameters:**
+  - `<key>`: The setting to change (e.g., `auto_push`, `delay`)
+  - `[value]`: The new value. If omitted, the command just prints the current value.
+  - **Example:** `gitpilot config auto_push true`
+
 ## Configuration
 
 `gitpilot.json` is generated in the root of your repository:

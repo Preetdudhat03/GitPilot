@@ -136,6 +136,51 @@ def cmd_status(args, repo_path: Path):
     except GitError:
         print("\nCould not determine uncommitted changes.")
 
+def cmd_config(args, repo_path: Path):
+    """Gets or sets a configuration value."""
+    logger = setup_logger(args.verbose)
+    config_manager = ConfigManager(repo_path)
+    
+    if not config_manager.config_path.exists():
+        logger.error(f"No {config_manager.CONFIG_FILENAME} found. Run 'gitpilot init' first.")
+        sys.exit(1)
+        
+    config = config_manager.load()
+    key = args.key
+    value = args.value
+    
+    if not hasattr(config, key):
+        logger.error(f"Unknown configuration key: '{key}'. Available keys: {list(config.__dict__.keys())}")
+        sys.exit(1)
+        
+    if value is None:
+        # Get Mode
+        current_val = getattr(config, key)
+        print(f"{key} = {current_val}")
+    else:
+        # Set Mode
+        current_val = getattr(config, key)
+        try:
+            if isinstance(current_val, bool):
+                lower_val = value.lower()
+                if lower_val in ('true', '1', 'yes', 'y'):
+                    new_val = True
+                elif lower_val in ('false', '0', 'no', 'n'):
+                    new_val = False
+                else:
+                    raise ValueError("Expected boolean (true/false)")
+            elif isinstance(current_val, int):
+                new_val = int(value)
+            else:
+                new_val = value
+                
+            setattr(config, key, new_val)
+            config_manager.save(config)
+            logger.info(f"{SUCCESS_SYMBOL} Updated {key} to {new_val}")
+        except ValueError as e:
+            logger.error(f"Invalid value for {key}: {e}")
+            sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description="GitPilot: A safe automated git commit watcher.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose/debug output")
@@ -158,6 +203,11 @@ def main():
     
     # Push
     subparsers.add_parser("push", help="Push existing local commits to the configured remote")
+    
+    # Config
+    config_parser = subparsers.add_parser("config", help="Get or set a configuration value in gitpilot.json")
+    config_parser.add_argument("key", help="The configuration key (e.g., auto_push, delay, branch)")
+    config_parser.add_argument("value", nargs="?", help="The value to set. If omitted, prints the current value.")
 
     args = parser.parse_args()
     repo_path = Path.cwd()
@@ -173,6 +223,8 @@ def main():
             cmd_commit(args, repo_path)
         elif args.command == "push":
             cmd_push(args, repo_path)
+        elif args.command == "config":
+            cmd_config(args, repo_path)
     except Exception as e:
         logger = setup_logger(args.verbose)
         logger.debug(f"Unhandled exception: {e}", exc_info=True)
