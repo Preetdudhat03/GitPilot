@@ -62,7 +62,7 @@ class GitEventHandler(FileSystemEventHandler):
             return
 
         # If it's a move event, also check the destination
-        if hasattr(event, 'dest_path') and self._is_ignored(event.dest_path):
+        if getattr(event, 'dest_path', None) and self._is_ignored(event.dest_path):
             return
 
         self._reset_timer()
