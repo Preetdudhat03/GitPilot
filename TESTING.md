@@ -20,6 +20,9 @@ GitPilot comes with a comprehensive suite of automated tests covering all core m
    # On Windows (PowerShell):
    $env:PYTHONPATH="."; python -m unittest discover -s tests -v
 
+   # On Windows (Command Prompt / CMD):
+   set PYTHONPATH=. && python -m unittest discover -s tests -v
+
    # On macOS / Linux:
    PYTHONPATH="." python -m unittest discover -s tests -v
    ```
