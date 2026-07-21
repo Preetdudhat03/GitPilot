@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gitpilot"
+name = "Gitpilot"
 version = "0.1.0"
 description = "A developer productivity CLI tool that safely automates git commits and pushes."
 authors = [
