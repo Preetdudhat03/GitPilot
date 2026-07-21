@@ -7,7 +7,7 @@ name = "gitpilot"
 version = "0.1.0"
 description = "A developer productivity CLI tool that safely automates git commits and pushes."
 authors = [
-    {name = "Preet Dudhat", email = "dudhatpreet@example.com"}
+    {name = "Preet Dudhat", email = "dudhatpreet20@example.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.8"
