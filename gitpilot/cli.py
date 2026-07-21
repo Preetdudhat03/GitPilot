@@ -182,7 +182,47 @@ def cmd_config(args, repo_path: Path):
             sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="GitPilot: A safe automated git commit watcher.")
+    epilog_text = """
+Detailed Command Reference:
+
+  init
+    Initializes a new GitPilot configuration in the current repository.
+    Creates a 'gitpilot.json' file with default settings.
+    No parameters.
+
+  watch
+    Starts the background file system watcher. It will automatically commit 
+    changes after the configured inactivity delay.
+    Arguments:
+      --dry-run   Simulates the watcher without executing any Git commands.
+                  Excellent for safely testing your configuration and safety rules.
+
+  commit
+    Manually triggers the safe commit pipeline exactly once.
+    Arguments:
+      --push      Overrides the 'auto_push' configuration to forcefully push the 
+                  commit to the remote repository immediately after success.
+
+  push
+    Manually pushes existing local commits to the configured remote branch.
+    No parameters.
+
+  status
+    Displays the current GitPilot configuration, repository health, and file count.
+    No parameters.
+
+  config <key> [value]
+    Gets or sets a configuration value directly in the 'gitpilot.json' file.
+    Arguments:
+      key         The setting to change (e.g., auto_push, delay, branch, remote)
+      value       The new value. If omitted, it prints the current value.
+                  Example: gitpilot config auto_push true
+"""
+    parser = argparse.ArgumentParser(
+        description="GitPilot: A safe automated git commit watcher.",
+        epilog=epilog_text,
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose/debug output")
     
     subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
