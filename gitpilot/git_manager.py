@@ -35,13 +35,13 @@ class GitManager:
                 text=True,
                 check=check
             )
-            return result.stdout.strip()
+            return result.stdout.strip('\r\n')
         except subprocess.CalledProcessError as e:
             if check:
                 error_msg = e.stderr.strip() or e.stdout.strip()
                 logger.debug(f"Git command failed: {' '.join(cmd)}\nError: {error_msg}")
                 raise GitError(error_msg)
-            return e.stdout.strip()
+            return e.stdout.strip('\r\n')
         except FileNotFoundError:
             raise GitError("Git executable not found. Please ensure Git is installed and in your PATH.")
 
