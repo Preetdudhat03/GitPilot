@@ -28,12 +28,12 @@ class RuleBasedCommitGenerator(CommitMessageGenerator):
         # Heuristics based on file paths
         has_tests = any("test" in f.lower() for f in staged_files)
         has_docs = any(f.lower().endswith(".md") or "docs/" in f.lower() for f in staged_files)
-        has_config = any(f.endswith(".json") or f.endswith(".toml") or f.endswith(".gitignore") or f.endswith(".txt") for f in staged_files)
+        non_test_python = any(f.endswith(".py") and "test" not in f.lower() for f in staged_files)
         has_python = any(f.endswith(".py") for f in staged_files)
 
         # Determine prefix
         prefix = "chore"
-        if has_tests and not has_python:
+        if has_tests and not non_test_python:
             prefix = "test"
         elif has_docs and not has_python:
             prefix = "docs"
