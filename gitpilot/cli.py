@@ -219,7 +219,7 @@ Detailed Command Reference:
       branch            (string)  The default branch to watch and push to (e.g., main)
       remote            (string)  The remote repository name to push to (e.g., origin)
       watch             (boolean) Whether watching is enabled globally (true/false)
-      delay             (integer) Inactivity delay in seconds before committing
+      delay             (integer) Inactivity delay in seconds before committing (min: 1)
       auto_push         (boolean) Automatically push to remote after committing (true/false)
       max_file_size_mb  (integer) Blocks staging files larger than this size in MB
       
