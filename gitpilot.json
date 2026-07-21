@@ -1,0 +1,8 @@
+{
+  "branch": "main",
+  "remote": "origin",
+  "watch": true,
+  "delay": 5,
+  "auto_push": true,
+  "max_file_size_mb": 50
+}
