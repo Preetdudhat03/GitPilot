@@ -26,7 +26,8 @@ class GitPilotPipeline:
         self.git = git
         self.safety = safety
         self.generator = generator
-        self.stats = stats or PushTracker(git.repo_path)
+        repo_path = getattr(git, "repo_path", None) or Path.cwd()
+        self.stats = stats if stats is not None else PushTracker(repo_path)
         
         # Thread lock to prevent concurrent git operations
         self._lock = threading.Lock()
