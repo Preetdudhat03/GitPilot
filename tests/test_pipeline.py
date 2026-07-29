@@ -75,6 +75,7 @@ class TestGitPilotPipeline(unittest.TestCase):
         self.assertTrue(result)
         self.git.commit.assert_called_once_with("feat: add hello")
         self.git.push.assert_called_once_with("origin", "main")
+        self.stats.increment_push_count.assert_called_once()
 
     def test_run_push_failure_preserves_commit(self):
         self.safety.check_repo_state.return_value = True
