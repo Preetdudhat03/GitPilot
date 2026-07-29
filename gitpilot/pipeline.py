@@ -1,5 +1,6 @@
 import logging
 import threading
+from pathlib import Path
 from typing import Optional
 from gitpilot.config import GitPilotConfig
 from gitpilot.git_manager import GitManager, GitError
