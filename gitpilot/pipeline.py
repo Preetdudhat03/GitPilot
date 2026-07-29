@@ -6,6 +6,7 @@ from gitpilot.git_manager import GitManager, GitError
 from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import CommitMessageGenerator
 from gitpilot.logger import print_success
+from gitpilot.stats import PushTracker
 
 logger = logging.getLogger("gitpilot")
 
@@ -19,11 +20,13 @@ class GitPilotPipeline:
                  config: GitPilotConfig, 
                  git: GitManager, 
                  safety: SafetyScanner, 
-                 generator: CommitMessageGenerator):
+                 generator: CommitMessageGenerator,
+                 stats: Optional[PushTracker] = None):
         self.config = config
         self.git = git
         self.safety = safety
         self.generator = generator
+        self.stats = stats or PushTracker(git.repo_path)
         
         # Thread lock to prevent concurrent git operations
         self._lock = threading.Lock()
@@ -120,6 +123,8 @@ class GitPilotPipeline:
             try:
                 self.git.push(remote, branch)
                 print_success(f"Pushed to {remote}/{branch}")
+                count = self.stats.increment_push_count()
+                logger.info(f"Total pushes today: {count}")
             except GitError as e:
                 # We log the error, but we DON'T undo the commit! The commit is safe locally.
                 logger.error(f"Push failed: {e}\nYour local commit was successful and remains intact.")
