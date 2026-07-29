@@ -27,8 +27,7 @@ class GitEventHandler(FileSystemEventHandler):
         "build",
         "dist",
         "gitpilot.json",
-        "gitpilot.log",
-        ".gitpilot_stats.json"
+        "gitpilot.log"
     }
 
     def __init__(self, repo_path: Path, config: GitPilotConfig, pipeline: GitPilotPipeline, dry_run: bool = False):

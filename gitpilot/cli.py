@@ -10,7 +10,6 @@ from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import RuleBasedCommitGenerator
 from gitpilot.pipeline import GitPilotPipeline
 from gitpilot.watcher import GitPilotWatcher
-from gitpilot.stats import PushTracker
 
 def print_banner():
     banner = r"""
@@ -101,7 +100,6 @@ def cmd_push(args, repo_path: Path):
     config_manager = ConfigManager(repo_path)
     config = config_manager.load()
     git = GitManager(repo_path)
-    stats = PushTracker(repo_path)
     
     branch = git.get_current_branch()
     logger.info(f"Pushing branch '{branch}' to '{config.remote}'...")
@@ -109,8 +107,6 @@ def cmd_push(args, repo_path: Path):
     try:
         git.push(config.remote, branch)
         logger.info(f"{SUCCESS_SYMBOL} Push successful.")
-        count = stats.increment_push_count()
-        logger.info(f"Total pushes today: {count}")
     except GitError as e:
         logger.error(f"Push failed: {e}")
         sys.exit(1)
@@ -121,7 +117,6 @@ def cmd_status(args, repo_path: Path):
     config_manager = ConfigManager(repo_path)
     config = config_manager.load()
     git = GitManager(repo_path)
-    stats = PushTracker(repo_path)
     
     if not git.is_git_repo():
         logger.error("Not a git repository.")
@@ -134,7 +129,6 @@ def cmd_status(args, repo_path: Path):
     print(f"Auto-push:    {config.auto_push}")
     print(f"Watch delay:  {config.delay} seconds")
     print(f"Max file size:{config.max_file_size_mb} MB")
-    print(f"Pushes today: {stats.get_pushes_today()}")
     
     try:
         changed = git.get_changed_files()

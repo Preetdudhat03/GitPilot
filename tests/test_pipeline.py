@@ -6,17 +6,14 @@ from gitpilot.git_manager import GitManager, GitError
 from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import RuleBasedCommitGenerator
 
-from gitpilot.stats import PushTracker
-
 class TestGitPilotPipeline(unittest.TestCase):
     def setUp(self):
         self.config = GitPilotConfig({"auto_push": True})
         self.git = MagicMock(spec=GitManager)
         self.safety = MagicMock(spec=SafetyScanner)
         self.generator = MagicMock(spec=RuleBasedCommitGenerator)
-        self.stats = MagicMock(spec=PushTracker)
         
-        self.pipeline = GitPilotPipeline(self.config, self.git, self.safety, self.generator, stats=self.stats)
+        self.pipeline = GitPilotPipeline(self.config, self.git, self.safety, self.generator)
 
     def test_run_no_changes(self):
         self.safety.check_repo_state.return_value = True
@@ -75,7 +72,6 @@ class TestGitPilotPipeline(unittest.TestCase):
         self.assertTrue(result)
         self.git.commit.assert_called_once_with("feat: add hello")
         self.git.push.assert_called_once_with("origin", "main")
-        self.stats.increment_push_count.assert_called_once()
 
     def test_run_push_failure_preserves_commit(self):
         self.safety.check_repo_state.return_value = True
