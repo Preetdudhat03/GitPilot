@@ -12,7 +12,8 @@ class RepositoryState(Enum):
     MERGING = "MERGING"               # Active merge state (.git/MERGE_HEAD)
     REBASING = "REBASING"             # Active rebase state (.git/rebase-apply or .git/rebase-merge)
     CONFLICT = "CONFLICT"             # Unresolved merge/rebase conflicts present
-    UNKNOWN = "UNKNOWN"               # Remote missing, detached HEAD, or non-git repo
+    DETACHED_HEAD = "DETACHED_HEAD"   # Repository is in detached HEAD state
+    UNKNOWN = "UNKNOWN"               # Remote missing or non-git repo
 
 @dataclass
 class RepositoryStatus:
