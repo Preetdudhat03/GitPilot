@@ -8,7 +8,6 @@ from gitpilot.config import GitPilotConfig, ConfigManager
 
 class TestConfig(unittest.TestCase):
     def setUp(self):
-        # Create a temporary directory to act as a fake repository
         self.temp_dir = tempfile.TemporaryDirectory()
         self.repo_path = Path(self.temp_dir.name)
         self.config_manager = ConfigManager(self.repo_path)
@@ -24,6 +23,9 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(config.watch)
         self.assertEqual(config.delay, 120)
         self.assertFalse(config.auto_push)
+        self.assertFalse(config.auto_sync)
+        self.assertEqual(config.sync_strategy, "merge")
+        self.assertEqual(config.fetch_interval, 300)
         self.assertEqual(config.max_file_size_mb, 50)
 
     def test_load_valid_config(self):
@@ -34,6 +36,9 @@ class TestConfig(unittest.TestCase):
             "watch": False,
             "delay": 300,
             "auto_push": True,
+            "auto_sync": True,
+            "sync_strategy": "rebase",
+            "fetch_interval": 120,
             "max_file_size_mb": 100
         }
         config_file = self.repo_path / "gitpilot.json"
@@ -46,7 +51,22 @@ class TestConfig(unittest.TestCase):
         self.assertFalse(config.watch)
         self.assertEqual(config.delay, 300)
         self.assertTrue(config.auto_push)
+        self.assertTrue(config.auto_sync)
+        self.assertEqual(config.sync_strategy, "rebase")
+        self.assertEqual(config.fetch_interval, 120)
         self.assertEqual(config.max_file_size_mb, 100)
+
+    def test_load_invalid_sync_strategy(self):
+        """Test fallback to 'merge' when invalid sync_strategy is provided."""
+        data = {
+            "sync_strategy": "potato"
+        }
+        config_file = self.repo_path / "gitpilot.json"
+        with open(config_file, "w") as f:
+            json.dump(data, f)
+            
+        config = self.config_manager.load()
+        self.assertEqual(config.sync_strategy, "merge")
 
     def test_load_invalid_json(self):
         """Test fallback to defaults when JSON is malformed."""
@@ -55,7 +75,6 @@ class TestConfig(unittest.TestCase):
             f.write("{ invalid json ")
             
         config = self.config_manager.load()
-        # Should not crash, should return defaults
         self.assertEqual(config.branch, "main")
 
     def test_load_invalid_data_types(self):
@@ -69,12 +88,12 @@ class TestConfig(unittest.TestCase):
             json.dump(data, f)
             
         config = self.config_manager.load()
-        self.assertEqual(config.delay, 120) # Fallback to default
-        self.assertEqual(config.max_file_size_mb, 50) # Fallback to default
+        self.assertEqual(config.delay, 120)
+        self.assertEqual(config.max_file_size_mb, 50)
 
     def test_save_config(self):
         """Test saving configuration writes properly formatted JSON."""
-        config = GitPilotConfig({"branch": "feature/test"})
+        config = GitPilotConfig({"branch": "feature/test", "auto_sync": True, "sync_strategy": "rebase"})
         self.config_manager.save(config)
         
         config_file = self.repo_path / "gitpilot.json"
@@ -84,7 +103,8 @@ class TestConfig(unittest.TestCase):
             data = json.load(f)
             
         self.assertEqual(data["branch"], "feature/test")
-        self.assertEqual(data["delay"], 120) # Default was saved
+        self.assertTrue(data["auto_sync"])
+        self.assertEqual(data["sync_strategy"], "rebase")
 
 if __name__ == '__main__':
     unittest.main()
