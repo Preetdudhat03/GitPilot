@@ -93,7 +93,13 @@ def cmd_watch(args, repo_path: Path):
     startup_status = pipeline.evaluate_startup()
 
     initial_mode = "active"
-    if startup_status.state in (RepositoryState.BEHIND_REMOTE, RepositoryState.DIVERGED, RepositoryState.CONFLICT) or startup_status.has_conflicts:
+    if startup_status.state == RepositoryState.DETACHED_HEAD:
+        initial_mode = "limited"
+        logger.warning("[!] Repository State: DETACHED_HEAD")
+        logger.warning("    Auto Commit: Disabled")
+        logger.warning("    Reason: Repository is currently detached from any branch.")
+        logger.warning("    Please checkout or create a branch before continuing.")
+    elif startup_status.state in (RepositoryState.BEHIND_REMOTE, RepositoryState.DIVERGED, RepositoryState.CONFLICT) or startup_status.has_conflicts:
         initial_mode = "limited"
         logger.warning("[!] Starting watcher in LIMITED (READ-ONLY) MODE.")
         logger.warning("    Automatic commits and pushes are paused until repository synchronization completes.")
@@ -174,6 +180,8 @@ def cmd_status(args, repo_path: Path):
     print(f"Branch:              {status.current_branch}")
     print(f"Remote:              {status.remote_name}/{status.remote_branch}")
     print(f"Repository State:    {status.state.value}")
+    if status.error_message:
+        print(f"Reason:              {status.error_message}")
     print(f"Ahead Commits:       {status.ahead_count}")
     print(f"Behind Commits:      {status.behind_count}")
     print(f"Auto-push:           {'Enabled' if pipeline.config.auto_push else 'Disabled'}")
