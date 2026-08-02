@@ -9,8 +9,8 @@ Version 1.1 introduces **Intelligent Auto Sync**, an automatic startup synchroni
 ## Features
 - **Smart Debouncing**: Waits for a configurable period of inactivity before committing. Rapid saves group into one meaningful commit.
 - **Intelligent Auto Sync**: Automatically fetches and synchronizes (`merge` or `rebase`) when the remote branch is ahead, both on startup and when a push is rejected.
-- **Limited / Read-Only Watcher Mode**: If your repository requires manual conflict resolution, GitPilot enters Limited Mode (watching files & notifying, pausing auto-commits) instead of exiting.
-- **Repository Health State Machine**: Evaluates 8 distinct repository states (`UP_TO_DATE`, `BEHIND_REMOTE`, `AHEAD_REMOTE`, `DIVERGED`, `MERGING`, `REBASING`, `CONFLICT`, `UNKNOWN`).
+- **Limited / Read-Only Watcher Mode**: If your repository requires manual conflict resolution or is in a `DETACHED_HEAD` state, GitPilot enters Limited Mode (watching files & notifying, pausing auto-commits) instead of exiting.
+- **Repository Health State Machine**: Evaluates 9 distinct repository states (`UP_TO_DATE`, `BEHIND_REMOTE`, `AHEAD_REMOTE`, `DIVERGED`, `MERGING`, `REBASING`, `CONFLICT`, `DETACHED_HEAD`, `UNKNOWN`).
 - **Centralized `RepositoryMonitor`**: Manages status caching, debouncing, idle detection, telemetry tracking (`last_fetch`, `last_status_refresh`, `last_sync`, `last_push`), and event callbacks.
 - **Safety Guarantees**: Never uses `git push --force`, `git push --force-with-lease`, or `git reset --hard`. Your local commits remain safe.
 - **Pre-Stage & Post-Stage Scanning**: Blocks large files and scans git diffs for sensitive credentials.
