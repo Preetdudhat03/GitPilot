@@ -1,7 +1,10 @@
 import subprocess
+import time
 from pathlib import Path
 from typing import List, Tuple, Optional
 import logging
+
+from gitpilot.status import RepositoryState, RepositoryStatus, SyncResult
 
 logger = logging.getLogger("gitpilot")
 
@@ -39,11 +42,11 @@ class GitManager:
             )
             return result.stdout.strip('\r\n')
         except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.strip() or e.stdout.strip()
             if check:
-                error_msg = e.stderr.strip() or e.stdout.strip()
                 logger.debug(f"Git command failed: {' '.join(cmd)}\nError: {error_msg}")
                 raise GitError(error_msg)
-            return e.stdout.strip('\r\n')
+            return error_msg
         except FileNotFoundError:
             raise GitError("Git executable not found. Please ensure Git is installed and in your PATH.")
 
@@ -57,34 +60,230 @@ class GitManager:
 
     def get_current_branch(self) -> str:
         """Gets the name of the currently checked out branch."""
-        return self._run_git("rev-parse", "--abbrev-ref", "HEAD")
+        try:
+            return self._run_git("rev-parse", "--abbrev-ref", "HEAD")
+        except GitError:
+            return "HEAD"
 
     def is_detached_head(self) -> bool:
         """Checks if the repository is in a detached HEAD state."""
         branch = self.get_current_branch()
         return branch == "HEAD"
 
+    def is_merge_in_progress(self) -> bool:
+        """Checks if a merge operation is currently in progress."""
+        git_dir = self.repo_path / ".git"
+        merge_head = git_dir / "MERGE_HEAD" if git_dir.is_dir() else self.repo_path / "MERGE_HEAD"
+        return merge_head.exists()
+
+    def is_rebase_in_progress(self) -> bool:
+        """Checks if a rebase operation is currently in progress."""
+        git_dir = self.repo_path / ".git"
+        rebase_apply = git_dir / "rebase-apply" if git_dir.is_dir() else self.repo_path / "rebase-apply"
+        rebase_merge = git_dir / "rebase-merge" if git_dir.is_dir() else self.repo_path / "rebase-merge"
+        return rebase_apply.exists() or rebase_merge.exists()
+
     def has_merge_conflicts(self) -> bool:
         """Checks if there are unresolved merge conflicts."""
-        # 'git ls-files -u' lists unmerged files
-        unmerged = self._run_git("ls-files", "-u")
-        return len(unmerged) > 0
+        try:
+            unmerged = self._run_git("ls-files", "-u")
+            return len(unmerged) > 0
+        except GitError:
+            return False
+
+    def has_rebase_conflicts(self) -> bool:
+        """Checks if there are unresolved rebase conflicts."""
+        return self.is_rebase_in_progress() or self.has_merge_conflicts()
+
+    def fetch_remote(self, remote: str = "origin", branch: Optional[str] = None) -> bool:
+        """
+        Fetches latest changes from the remote repository without merging.
+        Returns True if successful, False if network/remote error occurs.
+        """
+        try:
+            args = ["fetch", remote]
+            if branch:
+                args.append(branch)
+            self._run_git(*args)
+            return True
+        except GitError as e:
+            logger.debug(f"Fetch failed: {e}")
+            return False
+
+    def get_ahead_behind_count(self, remote: str = "origin", branch: str = "main") -> Tuple[int, int]:
+        """
+        Returns (ahead_count, behind_count) relative to remote tracking branch.
+        """
+        try:
+            out = self._run_git("rev-list", "--left-right", "--count", f"HEAD...{remote}/{branch}")
+            parts = out.split()
+            if len(parts) == 2:
+                return int(parts[0]), int(parts[1])
+            return 0, 0
+        except GitError:
+            return 0, 0
+
+    def evaluate_status(self, remote: str = "origin", branch: str = "main", fetch_first: bool = True) -> RepositoryStatus:
+        """
+        Evaluates full RepositoryStatus data object, checking in-progress operations,
+        conflicts, and commit counts against the remote tracking branch.
+        """
+        now = time.time()
+        last_fetch_time = None
+
+        if not self.is_git_repo():
+            return RepositoryStatus(
+                state=RepositoryState.UNKNOWN,
+                current_branch="N/A",
+                remote_name=remote,
+                remote_branch=branch,
+                error_message="Not a valid Git repository.",
+                last_updated=now
+            )
+
+        curr_branch = self.get_current_branch()
+        if curr_branch == "HEAD":
+            return RepositoryStatus(
+                state=RepositoryState.UNKNOWN,
+                current_branch="HEAD",
+                remote_name=remote,
+                remote_branch=branch,
+                error_message="Repository is in a detached HEAD state.",
+                last_updated=now
+            )
+
+        if fetch_first:
+            if self.fetch_remote(remote, curr_branch):
+                last_fetch_time = now
+
+        # In-progress / Conflict checks
+        if self.has_merge_conflicts():
+            return RepositoryStatus(
+                state=RepositoryState.CONFLICT,
+                current_branch=curr_branch,
+                remote_name=remote,
+                remote_branch=branch,
+                has_conflicts=True,
+                error_message="Merge conflicts detected.",
+                last_updated=now,
+                last_fetch=last_fetch_time
+            )
+
+        if self.is_merge_in_progress():
+            return RepositoryStatus(
+                state=RepositoryState.MERGING,
+                current_branch=curr_branch,
+                remote_name=remote,
+                remote_branch=branch,
+                error_message="Merge operation in progress.",
+                last_updated=now,
+                last_fetch=last_fetch_time
+            )
+
+        if self.is_rebase_in_progress():
+            return RepositoryStatus(
+                state=RepositoryState.REBASING,
+                current_branch=curr_branch,
+                remote_name=remote,
+                remote_branch=branch,
+                error_message="Rebase operation in progress.",
+                last_updated=now,
+                last_fetch=last_fetch_time
+            )
+
+        ahead, behind = self.get_ahead_behind_count(remote, curr_branch)
+
+        if ahead == 0 and behind == 0:
+            state = RepositoryState.UP_TO_DATE
+        elif ahead > 0 and behind == 0:
+            state = RepositoryState.AHEAD_REMOTE
+        elif ahead == 0 and behind > 0:
+            state = RepositoryState.BEHIND_REMOTE
+        else:
+            state = RepositoryState.DIVERGED
+
+        return RepositoryStatus(
+            state=state,
+            current_branch=curr_branch,
+            remote_name=remote,
+            remote_branch=curr_branch,
+            ahead_count=ahead,
+            behind_count=behind,
+            last_updated=now,
+            last_fetch=last_fetch_time
+        )
+
+    def merge_remote(self, remote: str = "origin", branch: str = "main") -> SyncResult:
+        """
+        Merges remote/branch into the current local branch.
+        """
+        remote_ref = f"{remote}/{branch}"
+        try:
+            out = self._run_git("merge", remote_ref)
+            return SyncResult(
+                success=True,
+                strategy="merge",
+                conflicts=False,
+                error_message=None
+            )
+        except GitError as e:
+            has_conflicts = self.has_merge_conflicts()
+            return SyncResult(
+                success=False,
+                strategy="merge",
+                conflicts=has_conflicts,
+                error_message=str(e)
+            )
+
+    def rebase_remote(self, remote: str = "origin", branch: str = "main") -> SyncResult:
+        """
+        Rebases current local branch onto remote/branch.
+        If a conflict occurs, automatically aborts the rebase to leave working tree clean.
+        """
+        remote_ref = f"{remote}/{branch}"
+        try:
+            out = self._run_git("rebase", remote_ref)
+            return SyncResult(
+                success=True,
+                strategy="rebase",
+                conflicts=False,
+                error_message=None
+            )
+        except GitError as e:
+            # Abort rebase immediately to restore repo state
+            self.abort_rebase()
+            return SyncResult(
+                success=False,
+                strategy="rebase",
+                conflicts=True,
+                error_message=str(e)
+            )
+
+    def abort_merge(self) -> None:
+        """Aborts an active merge operation."""
+        try:
+            self._run_git("merge", "--abort")
+        except GitError as e:
+            logger.debug(f"Failed to abort merge: {e}")
+
+    def abort_rebase(self) -> None:
+        """Aborts an active rebase operation."""
+        try:
+            self._run_git("rebase", "--abort")
+        except GitError as e:
+            logger.debug(f"Failed to abort rebase: {e}")
 
     def get_changed_files(self) -> List[str]:
         """
         Gets a list of all changed files (modified, deleted, untracked) 
         that are not ignored by .gitignore.
         """
-        # --porcelain is machine-readable status
         status = self._run_git("status", "--porcelain")
         files = []
         for line in status.splitlines():
             if not line:
                 continue
-            # Output format is "XY filename"
-            # Extract just the filename (which starts at index 3)
             filename = line[3:].strip()
-            # Handle quoted filenames (e.g. spaces in names)
             if filename.startswith('"') and filename.endswith('"'):
                 filename = filename[1:-1]
             files.append(filename)
@@ -94,7 +293,6 @@ class GitManager:
         """Stages specific files."""
         if not files:
             return
-        # Add files in chunks to avoid command line length limits
         chunk_size = 50
         for i in range(0, len(files), chunk_size):
             chunk = files[i:i + chunk_size]
@@ -116,7 +314,6 @@ class GitManager:
             try:
                 self._run_git("restore", "--staged", "--", file)
             except GitError:
-                # Fallback for older git versions
                 try:
                     self._run_git("rm", "--cached", "--", file)
                 except GitError as e:
@@ -138,18 +335,30 @@ class GitManager:
     def is_remote_ahead(self, remote: str, branch: str) -> bool:
         """
         Checks if the remote branch has commits that are not present locally.
-        Avoids attempting a push if it will be rejected.
         """
         try:
-            # Update remote tracking branches (does not merge)
-            self._run_git("fetch", remote, branch)
-            
-            # Count how many commits the remote has that we don't
+            self.fetch_remote(remote, branch)
             behind = self._run_git("rev-list", "--count", f"HEAD..{remote}/{branch}")
             return int(behind) > 0
         except GitError:
-            # If the branch doesn't exist on remote yet, it can't be ahead
             return False
+
+    def classify_push_error(self, error_msg: str) -> str:
+        """
+        Classifies a push failure error message into standardized error codes.
+        """
+        lower = error_msg.lower()
+        if any(keyword in lower for keyword in ["ahead", "fetch first", "non-fast-forward", "behind", "rejected"]):
+            return "REMOTE_AHEAD"
+        elif any(keyword in lower for keyword in ["could not resolve host", "network", "connection refused", "timed out"]):
+            return "NETWORK_ERROR"
+        elif any(keyword in lower for keyword in ["authentication failed", "could not read username", "access denied", "401"]):
+            return "AUTH_ERROR"
+        elif any(keyword in lower for keyword in ["permission denied", "403"]):
+            return "PERMISSION_DENIED"
+        elif any(keyword in lower for keyword in ["does not appear to be a git repository", "could not read from remote"]):
+            return "REPO_NOT_FOUND"
+        return "UNKNOWN"
 
     def push(self, remote: str, branch: str) -> None:
         """
@@ -159,7 +368,7 @@ class GitManager:
         if self.is_remote_ahead(remote, branch):
             raise GitError(
                 f"Push rejected: Remote branch '{remote}/{branch}' is ahead of your local branch.\n"
-                "You must pull and merge changes manually before GitPilot can push."
+                "You must pull and merge changes before GitPilot can push."
             )
             
         self._run_git("push", remote, branch)
