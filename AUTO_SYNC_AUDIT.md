@@ -1,7 +1,7 @@
 # GitPilot V1.1 – Intelligent Auto Sync Audit Report
 
 ## 1. Executive Summary
-GitPilot V1.1 successfully introduces **Intelligent Auto Sync**, Automatic Initial Synchronization on watcher startup, a dedicated `RepositoryMonitor` component, cached `RepositoryStatus`, operational telemetry, and **Limited (Read-Only) Watcher Mode**. All existing safety guarantees remain 100% intact.
+GitPilot V1.1 introduces **Intelligent Auto Sync**, Automatic Initial Synchronization on watcher startup, a dedicated `RepositoryMonitor` component, cached `RepositoryStatus`, operational telemetry, 9 repository health states (including `DETACHED_HEAD`), and **Limited (Read-Only) Watcher Mode**. All existing safety guarantees remain 100% intact.
 
 ---
 
@@ -94,6 +94,7 @@ All Git commands are strictly encapsulated in `GitManager`:
 | **Merge Conflict** | Halts auto sync, preserves local commit, switches watcher to Limited Mode. | PASSED |
 | **Rebase Conflict** | Runs `git rebase --abort`, restores repository state, preserves local commit. | PASSED |
 | **Startup Behind/Diverged** | Auto-syncs on startup or enters Limited Mode; never exits or commits blindly. | PASSED |
+| **Detached HEAD State** | Reports `DETACHED_HEAD` state, pauses commits with explanation message. | PASSED |
 | **Network / Auth Failures** | Logged as standard push errors without attempting auto sync. | PASSED |
 | **Invalid Config (`potato`)** | Safely falls back to `merge` strategy with warning. | PASSED |
 
@@ -102,11 +103,11 @@ All Git commands are strictly encapsulated in `GitManager`:
 ## 6. Test Suite Execution Results
 
 Executed test suite using both `pytest` and `unittest`:
-- Total Tests: **50 passed** in 3.10s.
+- Total Tests: **51 passed** in 3.52s.
 - `tests/test_cli.py`: Passed
 - `tests/test_commit_generator.py`: Passed
 - `tests/test_config.py`: Passed
-- `tests/test_git_manager.py`: Passed
+- `tests/test_git_manager.py`: Passed (includes `test_detached_head_status`)
 - `tests/test_monitor.py`: Passed
 - `tests/test_pipeline.py`: Passed
 - `tests/test_safety.py`: Passed
