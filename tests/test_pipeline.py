@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock
 from gitpilot.pipeline import GitPilotPipeline
 from gitpilot.config import GitPilotConfig
@@ -11,6 +12,7 @@ class TestGitPilotPipeline(unittest.TestCase):
     def setUp(self):
         self.config = GitPilotConfig({"auto_push": True, "auto_sync": False, "sync_strategy": "merge"})
         self.git = MagicMock(spec=GitManager)
+        self.git.repo_path = Path("/mock/repo")
         self.safety = MagicMock(spec=SafetyScanner)
         self.generator = MagicMock(spec=RuleBasedCommitGenerator)
         
@@ -84,7 +86,7 @@ class TestGitPilotPipeline(unittest.TestCase):
         self.git.classify_push_error.return_value = "REMOTE_AHEAD"
 
         result = self.pipeline.run()
-        self.assertTrue(result) # Local commit succeeded
+        self.assertTrue(result)
         self.git.merge_remote.assert_not_called()
 
     def test_auto_sync_enabled_merge_success_retry_push_success(self):
@@ -96,7 +98,6 @@ class TestGitPilotPipeline(unittest.TestCase):
         self.safety.post_stage_scan.return_value = True
         self.git.get_current_branch.return_value = "main"
 
-        # First push fails (remote ahead), second push succeeds
         self.git.push.side_effect = [GitError("Push rejected: Remote branch is ahead"), None]
         self.git.classify_push_error.return_value = "REMOTE_AHEAD"
         self.git.merge_remote.return_value = SyncResult(success=True, strategy="merge")
@@ -120,7 +121,7 @@ class TestGitPilotPipeline(unittest.TestCase):
         self.git.rebase_remote.return_value = SyncResult(success=False, strategy="rebase", conflicts=True)
 
         result = self.pipeline.run()
-        self.assertTrue(result) # Local commit safe
+        self.assertTrue(result)
         self.git.rebase_remote.assert_called_once_with("origin", "main")
 
     def test_evaluate_startup_up_to_date(self):
