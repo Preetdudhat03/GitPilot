@@ -144,11 +144,11 @@ class GitManager:
         curr_branch = self.get_current_branch()
         if curr_branch == "HEAD":
             return RepositoryStatus(
-                state=RepositoryState.UNKNOWN,
+                state=RepositoryState.DETACHED_HEAD,
                 current_branch="HEAD",
                 remote_name=remote,
                 remote_branch=branch,
-                error_message="Repository is in a detached HEAD state.",
+                error_message="Repository is currently detached from any branch. Please checkout or create a branch before continuing.",
                 last_updated=now
             )
 
