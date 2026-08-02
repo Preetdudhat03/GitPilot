@@ -8,6 +8,7 @@ class TestStatusModels(unittest.TestCase):
         self.assertEqual(RepositoryState.BEHIND_REMOTE.value, "BEHIND_REMOTE")
         self.assertEqual(RepositoryState.DIVERGED.value, "DIVERGED")
         self.assertEqual(RepositoryState.CONFLICT.value, "CONFLICT")
+        self.assertEqual(RepositoryState.DETACHED_HEAD.value, "DETACHED_HEAD")
 
     def test_repository_status_defaults(self):
         status = RepositoryStatus(
