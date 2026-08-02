@@ -17,17 +17,35 @@ class GitPilotConfig:
             self.delay: int = int(data.get("delay", 120))
             if self.delay < 1:
                 self.delay = 1
-        except ValueError:
+        except (ValueError, TypeError):
             self.delay = 120
             
         self.auto_push: bool = bool(data.get("auto_push", False))
+        
+        # Auto Sync settings (V1.1)
+        self.auto_sync: bool = bool(data.get("auto_sync", False))
+        
+        strategy = str(data.get("sync_strategy", "merge")).lower()
+        if strategy in ("merge", "rebase"):
+            self.sync_strategy: str = strategy
+        else:
+            logger.warning(f"Invalid sync_strategy '{strategy}'. Falling back to 'merge'.")
+            self.sync_strategy = "merge"
+
+        # Background fetch interval in seconds (default: 300, min: 0 to disable)
+        try:
+            self.fetch_interval: int = int(data.get("fetch_interval", 300))
+            if self.fetch_interval < 0:
+                self.fetch_interval = 0
+        except (ValueError, TypeError):
+            self.fetch_interval = 300
         
         # Maximum file size in MB before blocking a commit
         try:
             self.max_file_size_mb: int = int(data.get("max_file_size_mb", 50))
             if self.max_file_size_mb < 1:
                 self.max_file_size_mb = 50
-        except ValueError:
+        except (ValueError, TypeError):
             self.max_file_size_mb = 50
 
     def to_dict(self) -> Dict[str, Any]:
@@ -38,6 +56,9 @@ class GitPilotConfig:
             "watch": self.watch,
             "delay": self.delay,
             "auto_push": self.auto_push,
+            "auto_sync": self.auto_sync,
+            "sync_strategy": self.sync_strategy,
+            "fetch_interval": self.fetch_interval,
             "max_file_size_mb": self.max_file_size_mb
         }
 
