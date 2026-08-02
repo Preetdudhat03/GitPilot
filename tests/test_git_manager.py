@@ -81,5 +81,14 @@ class TestGitManager(unittest.TestCase):
         status = self.git.evaluate_status(remote="origin", branch="main", fetch_first=False)
         self.assertIn(status.state, [RepositoryState.UP_TO_DATE, RepositoryState.AHEAD_REMOTE, RepositoryState.BEHIND_REMOTE, RepositoryState.UNKNOWN])
 
+    def test_detached_head_status(self):
+        # Detach HEAD to current commit hash
+        commit_hash = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(self.repo_path), capture_output=True, text=True, check=True).stdout.strip()
+        subprocess.run(["git", "checkout", commit_hash], cwd=str(self.repo_path), capture_output=True, check=True)
+        
+        status = self.git.evaluate_status(remote="origin", branch="main", fetch_first=False)
+        self.assertEqual(status.state, RepositoryState.DETACHED_HEAD)
+        self.assertIn("detached from any branch", status.error_message)
+
 if __name__ == '__main__':
     unittest.main()
