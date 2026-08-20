@@ -17,19 +17,29 @@ import gitpilot.__main__ as main_module
 class TestBootstrap(unittest.TestCase):
 
     def test_parse_pyproject_python_version(self):
-        """1. Python version source of truth parsing test."""
+        """1. Python version source of truth parsing test using tomllib."""
+        toml_content = b'[project]\nrequires-python = ">=3.10"\n'
         with patch.object(Path, "exists", return_value=True), \
-             patch.object(Path, "read_text", return_value='requires-python = ">=3.10"'):
+             patch.object(Path, "read_bytes", return_value=toml_content):
             ver = parse_pyproject_python_version(Path("dummy/pyproject.toml"))
             self.assertEqual(ver, ">=3.10")
 
     def test_get_project_dependencies(self):
-        """2. Dynamic dependency parsing test from pyproject.toml."""
+        """2. Dynamic dependency parsing test from pyproject.toml using tomllib."""
+        toml_content = b'[project]\ndependencies = ["watchdog>=3.0.0"]\n'
         with patch("importlib.metadata.requires", side_effect=Exception("Metadata not found")), \
              patch.object(Path, "exists", return_value=True), \
-             patch.object(Path, "read_text", return_value='dependencies = [\n    "watchdog>=3.0.0"\n]'):
+             patch.object(Path, "read_bytes", return_value=toml_content):
             deps = get_project_dependencies(Path("dummy/pyproject.toml"))
-            self.assertIn("watchdog>=3.0.0", deps)
+            self.assertEqual(deps, ["watchdog>=3.0.0"])
+
+    def test_get_project_dependencies_empty_when_missing(self):
+        """Verify get_project_dependencies returns [] (NOT hardcoded watchdog) when metadata is missing."""
+        with patch("importlib.metadata.requires", side_effect=Exception("Metadata not found")), \
+             patch.object(Path, "exists", return_value=False):
+            deps = get_project_dependencies(Path("nonexistent/pyproject.toml"))
+            self.assertEqual(deps, [])
+
 
 
     def test_check_python_req(self):
