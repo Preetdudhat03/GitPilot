@@ -253,6 +253,20 @@ def cmd_config(args, repo_path: Path):
             logger.error(f"Invalid value for {key}: {e}")
             sys.exit(1)
 
+from gitpilot.bootstrap import EnvironmentInspector, BootstrapManager
+
+def cmd_doctor(args, repo_path: Path):
+    """Executes read-only environment diagnostics."""
+    inspector = EnvironmentInspector(repo_path)
+    exit_code = inspector.run_doctor()
+    sys.exit(exit_code)
+
+def cmd_setup(args, repo_path: Path):
+    """Executes environment bootstrap & recovery."""
+    manager = BootstrapManager(repo_path)
+    result = manager.run_setup(dry_run=args.dry_run, verbose=args.verbose, repair=getattr(args, 'repair', False))
+    sys.exit(result.exit_code)
+
 def main():
     epilog_text = """
 Detailed Command Reference:
@@ -277,6 +291,12 @@ Detailed Command Reference:
 
   config <key> [value]
     Gets or sets configuration values (auto_push, auto_sync, sync_strategy, fetch_interval, etc.).
+
+  doctor
+    Displays read-only environment diagnostics without modifying system.
+
+  setup [--dry-run] [--repair]
+    Bootstraps, installs, or repairs environment, dependencies, and PATH.
 """
     parser = argparse.ArgumentParser(
         description="GitPilot: A safe automated git commit watcher.",
@@ -312,6 +332,14 @@ Detailed Command Reference:
     config_parser.add_argument("key", help="The configuration key (e.g., auto_push, auto_sync, sync_strategy)")
     config_parser.add_argument("value", nargs="?", help="The value to set. If omitted, prints the current value.")
 
+    # Doctor (New in V1.2)
+    subparsers.add_parser("doctor", help="Run read-only environment diagnostics")
+
+    # Setup (New in V1.2)
+    setup_parser = subparsers.add_parser("setup", help="Bootstrap, install, or repair environment and PATH")
+    setup_parser.add_argument("--dry-run", action="store_true", help="Inspect environment without making modifications")
+    setup_parser.add_argument("--repair", action="store_true", help="Re-attempt safe user-level repairs")
+
     args = parser.parse_args()
     repo_path = Path.cwd()
 
@@ -330,6 +358,12 @@ Detailed Command Reference:
             cmd_push(args, repo_path)
         elif args.command == "config":
             cmd_config(args, repo_path)
+        elif args.command == "doctor":
+            cmd_doctor(args, repo_path)
+        elif args.command == "setup":
+            cmd_setup(args, repo_path)
+    except SystemExit:
+        raise
     except Exception as e:
         logger = setup_logger(args.verbose)
         logger.debug(f"Unhandled exception: {e}", exc_info=True)
@@ -338,3 +372,4 @@ Detailed Command Reference:
 
 if __name__ == "__main__":
     main()
+
