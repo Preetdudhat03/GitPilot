@@ -461,7 +461,13 @@ class BootstrapManager:
 
         # Check & Install declared project dependencies dynamically
         declared_deps = get_project_dependencies(self.inspector.project_root / "pyproject.toml")
+        if not declared_deps:
+            print("[!] Unable to determine GitPilot dependencies from package metadata or pyproject.toml.")
+            print("    Please verify pyproject.toml or reinstall GitPilot.")
+            warnings.append("Unable to determine package dependencies")
+
         for dep in declared_deps:
+
             dep_name = re.split(r'[<>=!~]', dep)[0].strip()
             dep_installed = False
             dep_version = None
