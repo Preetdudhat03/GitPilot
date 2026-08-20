@@ -1,32 +1,74 @@
-# GitPilot V1.1
+# GitPilot V1.2
 
 GitPilot is a smart, developer-productivity CLI tool that automatically watches a Git repository for file changes, waits until you stop typing (debouncing), and then safely stages, commits, and pushes your changes. 
 
-Version 1.1 introduces **Intelligent Auto Sync**, an automatic startup synchronization check, a developer status dashboard, and a lock-safe background fetch architecture.
+Version 1.2 introduces the **Environment Bootstrap & Recovery System** (`gitpilot setup`) and **Environment Diagnostics** (`gitpilot doctor`), designed for safe, idempotent installation across developer laptops, office workstations, and restricted college PCs.
 
 ---
 
 ## Features
+- **Environment Bootstrap & Recovery (`gitpilot setup`)**: One-command automated environment setup, dependency resolution, package installation, and user-level PATH recovery.
+- **Environment Doctor (`gitpilot doctor`)**: Read-only diagnostic inspector for Python, pip, Git, dependencies, virtual environments, PATH, and permissions.
+- **Restricted PC & Module Execution (`python -m gitpilot <command>`)**: Full command support via Python module execution when PATH cannot be modified due to OS security policies.
 - **Smart Debouncing**: Waits for a configurable period of inactivity before committing. Rapid saves group into one meaningful commit.
-- **Intelligent Auto Sync**: Automatically fetches and synchronizes (`merge` or `rebase`) when the remote branch is ahead, both on startup and when a push is rejected.
-- **Limited / Read-Only Watcher Mode**: If your repository requires manual conflict resolution or is in a `DETACHED_HEAD` state, GitPilot enters Limited Mode (watching files & notifying, pausing auto-commits) instead of exiting.
-- **Repository Health State Machine**: Evaluates 9 distinct repository states (`UP_TO_DATE`, `BEHIND_REMOTE`, `AHEAD_REMOTE`, `DIVERGED`, `MERGING`, `REBASING`, `CONFLICT`, `DETACHED_HEAD`, `UNKNOWN`).
-- **Centralized `RepositoryMonitor`**: Manages status caching, debouncing, idle detection, telemetry tracking (`last_fetch`, `last_status_refresh`, `last_sync`, `last_push`), and event callbacks.
-- **Safety Guarantees**: Never uses `git push --force`, `git push --force-with-lease`, or `git reset --hard`. Your local commits remain safe.
-- **Pre-Stage & Post-Stage Scanning**: Blocks large files and scans git diffs for sensitive credentials.
+- **Intelligent Auto Sync**: Automatically fetches and synchronizes (`merge` or `rebase`) when the remote branch is ahead.
+- **Limited / Read-Only Watcher Mode**: Pauses auto-commits when manual conflict resolution or `DETACHED_HEAD` is detected.
+- **Safety Guarantees**: Operates strictly at Current User level. Never uses `git push --force` or attempts administrator elevation.
 
 ---
 
-## Installation
+## Installation & Setup
 
+### 1. Standard Setup
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone https://github.com/yourusername/GitPilot.git
 cd GitPilot
 
-# 2. Install in editable mode (Python 3.8+)
-pip install -e .
+# Run automated bootstrap setup
+python -m gitpilot setup
 ```
+
+### 2. Restricted / College PC Setup
+On restricted computers where persistent PATH modification is blocked by system policy:
+```bash
+cd GitPilot
+python -m gitpilot setup
+
+# Safe Fallback: Execute via python module mode
+python -m gitpilot watch
+```
+
+---
+
+## Environment Diagnostics (`gitpilot doctor`)
+
+Run read-only environment checks anytime without making system changes:
+```bash
+gitpilot doctor
+# or
+python -m gitpilot doctor
+```
+
+Example Doctor Output:
+```
+=== GitPilot Environment Doctor ===
+
+Python:       [OK] 3.13.1 (C:\Python313\python.exe)
+Virtualenv:   [NONE] User/System site mode
+pip:          [OK] 26.1.1
+Git:          [OK] 2.42.0 (C:\Program Files\Git\cmd\git.exe)
+Context:      Source Tree
+GitPilot:     [OK] 1.2.0
+watchdog:     [OK] 6.0.0
+Scripts Dir:  C:\Users\User\AppData\Roaming\Python\Python313\Scripts
+CLI PATH:     [OK] Available in PATH
+User PATH:    [OK] Configured in HKCU\Environment
+Module Mode:  [OK] python -m gitpilot is working
+
+GitPilot environment is healthy.
+```
+
 
 ---
 
