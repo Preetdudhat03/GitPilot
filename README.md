@@ -17,6 +17,19 @@ Version 1.1 introduces **Intelligent Auto Sync**, an automatic startup synchroni
 
 ---
 
+## Installation
+
+```bash
+# 1. Clone repository
+git clone https://github.com/yourusername/GitPilot.git
+cd GitPilot
+
+# 2. Install in editable mode (Python 3.8+)
+pip install -e .
+```
+
+---
+
 ## Quick Start
 
 ```bash
@@ -41,7 +54,86 @@ gitpilot status
 
 ---
 
-## Configuration (`gitpilot.json`)
+## Global CLI Arguments
+
+Available across all commands:
+
+| Argument | Short Flag | Description |
+| :--- | :--- | :--- |
+| `--verbose` | `-v` | Enables detailed debug and traceback logging. |
+| `--help` | `-h` | Displays the help reference and available options. |
+
+---
+
+## Comprehensive Command Reference
+
+### 1. `gitpilot init`
+Initializes a new `gitpilot.json` configuration file in the repository root with safe default settings.
+- **Usage**: `gitpilot init`
+- **Arguments**: None.
+
+---
+
+### 2. `gitpilot watch`
+Starts the background file system watcher with Automatic Initial Synchronization.
+- **Usage**: `gitpilot watch [--dry-run]`
+- **Arguments**:
+  - `--dry-run`: Simulates file watching and commit pipeline execution without making any Git commits or pushes. Useful for testing safety rules and commit message generation.
+
+---
+
+### 3. `gitpilot sync` *(New in V1.1)*
+Manually triggers repository synchronization with the remote tracking branch using the configured strategy (`merge` or `rebase`). Does not create new commits.
+- **Usage**: `gitpilot sync`
+- **Arguments**: None.
+
+---
+
+### 4. `gitpilot commit`
+Manually triggers the safe commit pipeline once for all uncommitted changes.
+- **Usage**: `gitpilot commit [--push]`
+- **Arguments**:
+  - `--push`: Overrides `auto_push` configuration to push to remote immediately after successful commit creation.
+
+---
+
+### 5. `gitpilot push`
+Manually pushes existing local commits to the configured remote branch.
+- **Usage**: `gitpilot push`
+- **Arguments**: None.
+
+---
+
+### 6. `gitpilot status`
+Displays the rich developer status dashboard showing repository health state, commit counts, watcher mode, auto-push/sync status, and telemetry metrics.
+- **Usage**: `gitpilot status`
+- **Arguments**: None.
+
+---
+
+### 7. `gitpilot config`
+Gets or sets configuration values directly in `gitpilot.json`.
+- **Usage**: `gitpilot config <key> [value]`
+- **Arguments**:
+  - `<key>` *(Required)*: The configuration key to inspect or update.
+  - `[value]` *(Optional)*: The new value to set. If omitted, prints the current value of `<key>`.
+
+#### Available Configuration Keys (`<key>`):
+| Configuration Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `branch` | string | `"main"` | Default target branch name. |
+| `remote` | string | `"origin"` | Default target remote repository name. |
+| `watch` | boolean | `true` | Global watcher activation flag (`true`/`false`). |
+| `delay` | integer | `120` | Inactivity delay in seconds before committing (min: 1). |
+| `auto_push` | boolean | `false` | Automatically push to remote after committing (`true`/`false`). |
+| `auto_sync` | boolean | `false` | Automatically fetch & sync when behind or push is rejected (`true`/`false`). |
+| `sync_strategy` | string | `"merge"` | Strategy for Auto Sync (`"merge"` or `"rebase"`). |
+| `fetch_interval` | integer | `300` | Background fetch interval in seconds (`0` to disable). |
+| `max_file_size_mb` | integer | `50` | Maximum file size in MB allowed to be staged. |
+
+---
+
+## Configuration File (`gitpilot.json`)
 
 ```json
 {
@@ -56,27 +148,10 @@ gitpilot status
   "max_file_size_mb": 50
 }
 ```
-- **`auto_sync`**: Automatically fetch and synchronize remote changes (`true`/`false`). Default: `false`.
-- **`sync_strategy`**: Synchronization method (`"merge"` or `"rebase"`). Default: `"merge"`.
-- **`fetch_interval`**: Background fetch frequency in seconds. Default: `300` (set `0` to disable).
 
 ---
 
-## CLI Commands
-
-| Command | Description |
-| :--- | :--- |
-| `gitpilot init` | Creates initial `gitpilot.json` configuration file. |
-| `gitpilot watch` | Starts background watcher with Automatic Initial Synchronization. |
-| `gitpilot sync` | Manually triggers repository synchronization with remote. |
-| `gitpilot commit [--push]` | Manually triggers the safe commit pipeline. |
-| `gitpilot push` | Manually pushes local commits to remote. |
-| `gitpilot status` | Displays the rich developer status dashboard. |
-| `gitpilot config <key> [val]` | Gets or sets configuration values. |
-
----
-
-## Developer Dashboard (`gitpilot status`)
+## Developer Dashboard Example (`gitpilot status`)
 
 ```
 === GitPilot Developer Dashboard ===
@@ -98,7 +173,9 @@ Pipeline Lock:       Idle
 
 ---
 
-## Testing
+## Automated Test Suite
+
+Run the full test suite using pytest or unittest:
 
 ```bash
 python -m pytest tests
