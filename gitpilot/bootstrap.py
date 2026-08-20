@@ -55,26 +55,32 @@ class SetupResult:
     actions_performed: List[str] = field(default_factory=list)
     fallback_available: bool = True
 
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
+
 def parse_pyproject_python_version(pyproject_path: Path) -> str:
-    """Reads requires-python from pyproject.toml as single source of truth."""
+    """Reads requires-python from pyproject.toml as single source of truth using tomllib."""
     default_version = ">=3.8"
-    if not pyproject_path.exists():
+    if not pyproject_path.exists() or not tomllib:
         return default_version
     try:
-        content = pyproject_path.read_text(encoding="utf-8")
-        match = re.search(r'requires-python\s*=\s*["\']([^"\']+)["\']', content)
-        if match:
-            return match.group(1).strip()
+        content = pyproject_path.read_bytes()
+        data = tomllib.loads(content.decode("utf-8"))
+        return data.get("project", {}).get("requires-python", default_version)
     except Exception:
-        pass
-    return default_version
+        return default_version
 
 def get_project_dependencies(pyproject_path: Optional[Path] = None) -> List[str]:
     """
-    Derives required dependencies dynamically from installed package metadata or pyproject.toml.
-    Prevents hardcoding dependency lists inside bootstrap logic.
+    Derives required dependencies dynamically from installed package metadata or pyproject.toml using tomllib.
+    Returns empty list if metadata is unavailable (no hardcoded fallbacks).
     """
-    deps = []
+    # 1. Try reading installed package metadata first
     try:
         reqs = importlib.metadata.requires("GitPilot")
         if reqs:
@@ -82,27 +88,28 @@ def get_project_dependencies(pyproject_path: Optional[Path] = None) -> List[str]
     except Exception:
         pass
 
-    if pyproject_path and pyproject_path.exists():
+    # 2. Try reading pyproject.toml using tomllib
+    if pyproject_path and pyproject_path.exists() and tomllib:
         try:
-            content = pyproject_path.read_text(encoding="utf-8")
-            match = re.search(r'dependencies\s*=\s*\[(.*?)\]', content, re.DOTALL)
-            if match:
-                raw_deps = match.group(1)
-                for item in re.findall(r'["\']([^"\']+)["\']', raw_deps):
-                    deps.append(item.strip())
+            content = pyproject_path.read_bytes()
+            data = tomllib.loads(content.decode("utf-8"))
+            deps = data.get("project", {}).get("dependencies", [])
+            if isinstance(deps, list):
+                return list(deps)
         except Exception:
             pass
 
-    return deps or ["watchdog>=3.0.0"]
+    return []
 
 def check_python_req(version_str: str) -> bool:
-    """Validates python version against standard requirement (e.g. >=3.8)."""
+    """Validates python version against specifier from project metadata."""
     current = sys.version_info[:2]
     match = re.search(r'>=\s*(\d+)\.(\d+)', version_str)
     if match:
         req_major, req_minor = int(match.group(1)), int(match.group(2))
         return current >= (req_major, req_minor)
     return current >= (3, 8)
+
 
 
 class EnvironmentInspector:
