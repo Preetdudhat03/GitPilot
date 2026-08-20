@@ -497,6 +497,16 @@ class BootstrapManager:
         if status.module_mode_working:
             print("[OK] GitPilot module execution (python -m gitpilot) is operational")
 
+        if dry_run:
+            print("\n[DRY RUN COMPLETE] Zero modifications were made to the system.")
+            return SetupResult(
+                success=True,
+                exit_code=0,
+                status=status,
+                actions_performed=actions_performed,
+                warnings=warnings
+            )
+
         if status.package_installed and (status.cli_in_path or path_repaired):
             print("[OK] GitPilot CLI setup completed successfully.")
             print("\nYou can now use:")
@@ -534,5 +544,7 @@ class BootstrapManager:
                 success=False,
                 exit_code=4,
                 status=status,
-                errors=errors
+                errors=errors,
+                actions_performed=actions_performed
             )
+
