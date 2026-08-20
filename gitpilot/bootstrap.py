@@ -343,20 +343,21 @@ class BootstrapManager:
     def render_fallback_box(self):
         """Displays prominent user fallback notification box for restricted PCs."""
         box = """
-┌────────────────────────────────────────────────────────┐
-│ GitPilot is installed successfully                     │
-│                                                        │
-│ PATH modification was restricted by system policy.     │
-│ GitPilot will NOT request administrator privileges.    │
-│                                                        │
-│ Safe Fallback Command:                                 │
-│                                                        │
-│     python -m gitpilot watch                           │
-│                                                        │
-│ All GitPilot commands can be run via python -m module. │
-└────────────────────────────────────────────────────────┘
++--------------------------------------------------------+
+| GitPilot is installed successfully                     |
+|                                                        |
+| PATH modification was restricted by system policy.     |
+| GitPilot will NOT request administrator privileges.    |
+|                                                        |
+| Safe Fallback Command:                                 |
+|                                                        |
+|     python -m gitpilot watch                           |
+|                                                        |
+| All GitPilot commands can be run via python -m module. |
++--------------------------------------------------------+
 """
         print(box)
+
 
     def run_setup(self, dry_run: bool = False, verbose: bool = False, repair: bool = False) -> SetupResult:
         print("GitPilot Setup")
