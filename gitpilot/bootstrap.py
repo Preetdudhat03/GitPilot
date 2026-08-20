@@ -452,31 +452,45 @@ class BootstrapManager:
                     print(f"[X] Failed to install package: {e}")
                     errors.append(str(e))
 
-        # Check watchdog
-        if status.watchdog_installed:
-            print(f"[OK] watchdog dependency available ({status.watchdog_version})")
-        else:
-            if dry_run:
-                print("[WOULD CHANGE] Install watchdog dependency")
-                actions_performed.append("Would install watchdog")
-            else:
-                print("Installing watchdog dependency...")
-                try:
-                    cmd = [sys.executable, "-m", "pip", "install"]
-                    if not status.is_venv:
-                        cmd.append("--user")
-                    cmd.append("watchdog>=3.0.0")
+        # Check & Install declared project dependencies dynamically
+        declared_deps = get_project_dependencies(self.inspector.project_root / "pyproject.toml")
+        for dep in declared_deps:
+            dep_name = re.split(r'[<>=!~]', dep)[0].strip()
+            dep_installed = False
+            dep_version = None
+            try:
+                dep_version = importlib.metadata.version(dep_name)
+                dep_installed = True
+            except Exception:
+                if importlib.util.find_spec(dep_name) is not None:
+                    dep_installed = True
+                    dep_version = "available"
 
-                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                    if res.returncode == 0:
-                        print("[OK] watchdog dependency installed")
-                        actions_performed.append("Installed watchdog dependency")
-                    else:
-                        print(f"[X] Failed to install watchdog: {res.stderr.strip()}")
-                        errors.append("Failed to install watchdog")
-                except Exception as e:
-                    print(f"[X] Failed to install watchdog: {e}")
-                    errors.append(str(e))
+            if dep_installed:
+                print(f"[OK] {dep_name} dependency available ({dep_version})")
+            else:
+                if dry_run:
+                    print(f"[WOULD CHANGE] Install {dep} dependency")
+                    actions_performed.append(f"Would install {dep}")
+                else:
+                    print(f"Installing {dep} dependency...")
+                    try:
+                        cmd = [sys.executable, "-m", "pip", "install"]
+                        if not status.is_venv:
+                            cmd.append("--user")
+                        cmd.append(dep)
+
+                        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                        if res.returncode == 0:
+                            print(f"[OK] {dep} dependency installed")
+                            actions_performed.append(f"Installed {dep} dependency")
+                        else:
+                            print(f"[X] Failed to install {dep}: {res.stderr.strip()}")
+                            errors.append(f"Failed to install {dep}")
+                    except Exception as e:
+                        print(f"[X] Failed to install {dep}: {e}")
+                        errors.append(str(e))
+
 
         # Re-inspect status after package actions
         status = self.inspector.inspect_environment()
