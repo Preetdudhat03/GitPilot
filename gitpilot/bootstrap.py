@@ -86,9 +86,6 @@ class EnvironmentInspector:
     def __init__(self, project_root: Optional[Path] = None):
         self.project_root = project_root or Path.cwd()
 
-    def inspect(() -> EnvironmentStatus:
-        pass
-
     def inspect_environment(self) -> EnvironmentStatus:
         # Python check
         pyproject_file = self.project_root / "pyproject.toml"
