@@ -25,10 +25,12 @@ class TestBootstrap(unittest.TestCase):
 
     def test_get_project_dependencies(self):
         """2. Dynamic dependency parsing test from pyproject.toml."""
-        with patch.object(Path, "exists", return_value=True), \
-             patch.object(Path, "read_text", return_value='dependencies = ["watchdog>=3.0.0"]'):
+        with patch("importlib.metadata.requires", side_effect=Exception("Metadata not found")), \
+             patch.object(Path, "exists", return_value=True), \
+             patch.object(Path, "read_text", return_value='dependencies = [\n    "watchdog>=3.0.0"\n]'):
             deps = get_project_dependencies(Path("dummy/pyproject.toml"))
             self.assertIn("watchdog>=3.0.0", deps)
+
 
     def test_check_python_req(self):
         """3. Python requirement version check logic."""
