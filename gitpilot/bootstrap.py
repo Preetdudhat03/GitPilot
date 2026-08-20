@@ -69,16 +69,41 @@ def parse_pyproject_python_version(pyproject_path: Path) -> str:
         pass
     return default_version
 
+def get_project_dependencies(pyproject_path: Optional[Path] = None) -> List[str]:
+    """
+    Derives required dependencies dynamically from installed package metadata or pyproject.toml.
+    Prevents hardcoding dependency lists inside bootstrap logic.
+    """
+    deps = []
+    try:
+        reqs = importlib.metadata.requires("GitPilot")
+        if reqs:
+            return list(reqs)
+    except Exception:
+        pass
+
+    if pyproject_path and pyproject_path.exists():
+        try:
+            content = pyproject_path.read_text(encoding="utf-8")
+            match = re.search(r'dependencies\s*=\s*\[(.*?)\]', content, re.DOTALL)
+            if match:
+                raw_deps = match.group(1)
+                for item in re.findall(r'["\']([^"\']+)["\']', raw_deps):
+                    deps.append(item.strip())
+        except Exception:
+            pass
+
+    return deps or ["watchdog>=3.0.0"]
+
 def check_python_req(version_str: str) -> bool:
     """Validates python version against standard requirement (e.g. >=3.8)."""
-    # Parse version tuple
     current = sys.version_info[:2]
-    # Simple specifier parser for >=3.x
     match = re.search(r'>=\s*(\d+)\.(\d+)', version_str)
     if match:
         req_major, req_minor = int(match.group(1)), int(match.group(2))
         return current >= (req_major, req_minor)
     return current >= (3, 8)
+
 
 class EnvironmentInspector:
     """Read-only environment diagnostic inspector for 'gitpilot doctor'."""
