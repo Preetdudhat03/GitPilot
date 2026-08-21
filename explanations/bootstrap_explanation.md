@@ -108,7 +108,13 @@ Contains data models (`EnvironmentStatus`, `SetupResult`), `EnvironmentInspector
    ```
    Distinguishes active virtual environments from user/system site installs.
 
-5. **Windows Registry PATH Repair**:
+5. **Git Identity Inspection & Source Resolution**:
+   ```python
+   inspect_git_identity(project_root)
+   ```
+   Safely inspects `user.name` and `user.email` using `git config --show-origin --get ...`. Parses configuration scope (`local`, `global`, `system`) to report where active identity originates.
+
+6. **Windows Registry PATH Repair**:
    ```python
    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
        # Appends scripts_dir idempotently to HKCU\Environment Path
@@ -117,7 +123,20 @@ Contains data models (`EnvironmentStatus`, `SetupResult`), `EnvironmentInspector
 
 ---
 
-## 4. Exit Code Reference
+## 4. Git & Identity Preflight Philosophy
+
+### Why Git is Not Automatically Installed
+Installing Git on enterprise or university machines often requires administrator access (`sudo` / `runas`). Bypassing system policies is dangerous and violates security policies. GitPilot clearly flags missing Git dependencies (Exit Code `2`) and guides users to official system installers.
+
+### Why Git Identity is Never Auto-Configured
+Git commits permanently attribute code changes to `user.name` and `user.email`. GitPilot strictly treats Git identity as a user responsibility. If identity is incomplete:
+- `gitpilot doctor` reports `[!] user.name/user.email is not configured`.
+- `gitpilot setup` issues clear setup warnings with exact manual `git config --global ...` commands.
+- `gitpilot watch` pauses automatic commits in **Limited Mode** before attempting invalid Git commits.
+
+---
+
+## 5. Exit Code Reference
 
 | Exit Code | Meaning | Condition |
 |---|---|---|
@@ -129,9 +148,10 @@ Contains data models (`EnvironmentStatus`, `SetupResult`), `EnvironmentInspector
 
 ---
 
-## 5. Command Reference
+## 6. Command Reference
 
-- `gitpilot doctor`: Read-only environment inspection. Zero modifications.
+- `gitpilot doctor`: Read-only environment inspection (includes Python, pip, Git, Git identity & origin source). Zero modifications.
 - `gitpilot setup`: Automatic environment bootstrap & recovery.
 - `gitpilot setup --dry-run`: Previews setup actions without performing changes.
 - `gitpilot setup --repair`: Re-attempts safe user-level repairs for missing PATH or broken installations.
+
