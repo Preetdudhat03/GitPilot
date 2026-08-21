@@ -93,7 +93,16 @@ def cmd_watch(args, repo_path: Path):
     startup_status = pipeline.evaluate_startup()
 
     initial_mode = "active"
-    if startup_status.state == RepositoryState.DETACHED_HEAD:
+    user_name, user_email, _, identity_ok = pipeline.git.get_user_identity()
+    if not identity_ok:
+        initial_mode = "limited"
+        logger.warning("[!] Git identity is not configured. Automatic commits are paused.")
+        logger.info("    Configure your Git identity:")
+        if not user_name:
+            logger.info('        git config --global user.name "Your Name"')
+        if not user_email:
+            logger.info('        git config --global user.email "you@example.com"')
+    elif startup_status.state == RepositoryState.DETACHED_HEAD:
         initial_mode = "limited"
         logger.warning("[!] Repository State: DETACHED_HEAD")
         logger.warning("    Auto Commit: Disabled")
@@ -104,6 +113,7 @@ def cmd_watch(args, repo_path: Path):
         logger.warning("[!] Starting watcher in LIMITED (READ-ONLY) MODE.")
         logger.warning("    Automatic commits and pushes are paused until repository synchronization completes.")
         logger.info("    Run 'gitpilot sync' or resolve conflicts manually to activate automatic commits.")
+
 
     watcher = GitPilotWatcher(repo_path, pipeline.config, pipeline, dry_run=args.dry_run, initial_mode=initial_mode)
     watcher.start()
