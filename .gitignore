@@ -38,5 +38,10 @@ venv.bak/
 # GitPilot specifically generated files (but NOT gitpilot.json, let the user decide!)
 gitpilot.log
 
+# Testing & Coverage Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
 
 testrepo/
