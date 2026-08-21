@@ -225,21 +225,35 @@ python -m gitpilot doctor
 ```text
 === GitPilot Environment Doctor ===
 
-Python:       [OK] 3.13.1 (C:\Users\User\AppData\Local\Programs\Python\Python313\python.exe)
-Virtualenv:   [NONE] User/System site mode
-pip:          [OK] 26.1.1
-Git:          [OK] 2.42.0 (C:\Program Files\Git\cmd\git.exe)
-Context:      Source Tree
-GitPilot:     [OK] 1.2.0
-watchdog:     [OK] 6.0.0
-Scripts Dir:  C:\Users\User\AppData\Roaming\Python\Python313\Scripts
-Executable:   C:\Users\User\AppData\Roaming\Python\Python313\Scripts\gitpilot.exe
-CLI PATH:     [OK] Available in PATH
-User PATH:    [OK] Configured in HKCU\Environment
-Module Mode:  [OK] python -m gitpilot is working
+Python
+[OK] Python 3.13.1
+[OK] Python executable: C:\Users\User\AppData\Local\Programs\Python\Python313\python.exe
 
-GitPilot environment is healthy.
+pip
+[OK] pip 26.1.1
+
+Git
+[OK] Git detected
+[OK] Version: 2.42.0.windows.2
+[OK] Executable: C:\Program Files\Git\cmd\git.EXE
+
+Git Identity
+[OK] user.name: Preet Dudhat
+[OK] user.email: preet@example.com
+[OK] Source: global
+
+GitPilot
+[OK] Package installed (1.2.0)
+[OK] Dependencies available (watchdog 6.0.0)
+[OK] CLI available (C:\Users\User\AppData\Local\Programs\Python\Python313\Scripts\gitpilot.EXE)
+
+Environment
+[OK] PATH (Available in PATH)
+[OK] Module execution (python -m gitpilot working)
+
+Overall Status: HEALTHY
 ```
+
 
 ---
 
