@@ -90,5 +90,30 @@ class TestGitManager(unittest.TestCase):
         self.assertEqual(status.state, RepositoryState.DETACHED_HEAD)
         self.assertIn("detached from any branch", status.error_message)
 
+    def test_get_user_identity_configured(self):
+        """Verifies configured local user identity detection."""
+        name, email, source, ok = self.git.get_user_identity()
+        self.assertEqual(name, "Test User")
+        self.assertEqual(email, "test@example.com")
+        self.assertTrue(ok)
+        self.assertIn(source, ("local", "global", "system", "local/global", "global/local"))
+
+    def test_local_identity_overriding_global(self):
+        """Verifies local repository identity overrides global setting."""
+        subprocess.run(["git", "config", "user.name", "Local Dev"], cwd=str(self.repo_path), check=True)
+        name, email, source, ok = self.git.get_user_identity()
+        self.assertEqual(name, "Local Dev")
+        self.assertTrue(ok)
+
+    def test_commit_author_identity_unknown_handling(self):
+        """Verifies commit handles missing author identity with clean GitError."""
+        # Unset local identity
+        subprocess.run(["git", "config", "--unset", "user.name"], cwd=str(self.repo_path), check=True)
+        with patch.object(self.git, "_run_git", side_effect=GitError("Author identity unknown\n*** Please tell me who you are.")):
+            with self.assertRaises(GitError) as ctx:
+                self.git.commit("test")
+            self.assertIn("Git identity is not configured", str(ctx.exception))
+
 if __name__ == '__main__':
     unittest.main()
+
