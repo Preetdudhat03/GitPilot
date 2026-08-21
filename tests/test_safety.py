@@ -15,6 +15,7 @@ class TestSafetyScanner(unittest.TestCase):
         
         self.config = GitPilotConfig({"max_file_size_mb": 1}) # 1 MB limit
         self.git_manager_mock = MagicMock(spec=GitManager)
+        self.git_manager_mock.get_user_identity.return_value = ("Test User", "test@example.com", "global", True)
         
         self.scanner = SafetyScanner(self.repo_path, self.config, self.git_manager_mock)
 
