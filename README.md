@@ -129,6 +129,30 @@ One-command environment setup that installs packages, resolves declared dependen
 
 ---
 
+## Git Requirements
+
+GitPilot requires Git to be installed and available in your system PATH.
+
+Verify Git installation:
+```bash
+git --version
+```
+
+Configure your Git identity before enabling automatic commits:
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+Verify your environment and Git identity:
+```bash
+gitpilot doctor
+```
+
+> **Note**: GitPilot inspects your effective Git identity (`user.name` and `user.email`) across global, system, or local repository levels. GitPilot **never** automatically installs Git or silently alters your Git configuration.
+
+---
+
 ## Installation & Setup
 
 ### 1. Clone the Repository
@@ -148,6 +172,7 @@ This command inspects your Python environment, installs required dependencies, i
 ```bash
 gitpilot doctor
 ```
+
 
 ---
 
