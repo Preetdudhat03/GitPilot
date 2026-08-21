@@ -33,17 +33,21 @@ class EnvironmentStatus:
     git_available: bool
     git_version: Optional[str]
     git_path: Optional[str]
-    is_source_tree: bool
-    package_installed: bool
-    package_version: Optional[str]
-    watchdog_installed: bool
-    watchdog_version: Optional[str]
-    scripts_dir: str
-    gitpilot_exec_path: Optional[str]
-    cli_in_path: bool
-    user_path_configured: bool
-    user_path_restricted: bool
-    module_mode_working: bool
+    git_user_name: Optional[str] = None
+    git_user_email: Optional[str] = None
+    git_identity_source: str = "none"
+    git_identity_ok: bool = False
+    is_source_tree: bool = False
+    package_installed: bool = False
+    package_version: Optional[str] = None
+    watchdog_installed: bool = False
+    watchdog_version: Optional[str] = None
+    scripts_dir: str = ""
+    gitpilot_exec_path: Optional[str] = None
+    cli_in_path: bool = False
+    user_path_configured: bool = False
+    user_path_restricted: bool = False
+    module_mode_working: bool = False
 
 @dataclass
 class SetupResult:
@@ -80,7 +84,6 @@ def get_project_dependencies(pyproject_path: Optional[Path] = None) -> List[str]
     Derives required dependencies dynamically from installed package metadata or pyproject.toml using tomllib.
     Returns empty list if metadata is unavailable (no hardcoded fallbacks).
     """
-    # 1. Try reading installed package metadata first
     try:
         reqs = importlib.metadata.requires("GitPilot")
         if reqs:
@@ -88,7 +91,6 @@ def get_project_dependencies(pyproject_path: Optional[Path] = None) -> List[str]
     except Exception:
         pass
 
-    # 2. Try reading pyproject.toml using tomllib
     if pyproject_path and pyproject_path.exists() and tomllib:
         try:
             content = pyproject_path.read_bytes()
@@ -110,6 +112,102 @@ def check_python_req(version_str: str) -> bool:
         return current >= (req_major, req_minor)
     return current >= (3, 8)
 
+def _parse_config_origin(origin_str: str) -> str:
+    s = origin_str.lower()
+    if ".git/config" in s or ".git\\config" in s or "local" in s:
+        return "local"
+    elif ".gitconfig" in s or "global" in s or "home" in s or "appdata" in s or "users" in s:
+        return "global"
+    elif "etc" in s or "system" in s or "program files" in s:
+        return "system"
+    return "global"
+
+def inspect_git_identity(project_root: Optional[Path] = None) -> Tuple[Optional[str], Optional[str], str, bool]:
+    """Inspects Git identity (user.name and user.email) and configuration level."""
+    user_name = None
+    user_email = None
+    name_source = None
+    email_source = None
+    cwd_path = str(project_root) if project_root and project_root.exists() else None
+
+    # Check user.name
+    try:
+        res = subprocess.run(
+            ["git", "config", "--show-origin", "--get", "user.name"],
+            cwd=cwd_path,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            out = res.stdout.strip()
+            if "\t" in out:
+                origin_str, val = out.split("\t", 1)
+                user_name = val.strip()
+                name_source = _parse_config_origin(origin_str)
+            else:
+                user_name = out
+                name_source = "global"
+        else:
+            res_simple = subprocess.run(
+                ["git", "config", "--get", "user.name"],
+                cwd=cwd_path,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if res_simple.returncode == 0 and res_simple.stdout.strip():
+                user_name = res_simple.stdout.strip()
+                name_source = "global"
+    except Exception:
+        pass
+
+    # Check user.email
+    try:
+        res = subprocess.run(
+            ["git", "config", "--show-origin", "--get", "user.email"],
+            cwd=cwd_path,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            out = res.stdout.strip()
+            if "\t" in out:
+                origin_str, val = out.split("\t", 1)
+                user_email = val.strip()
+                email_source = _parse_config_origin(origin_str)
+            else:
+                user_email = out
+                email_source = "global"
+        else:
+            res_simple = subprocess.run(
+                ["git", "config", "--get", "user.email"],
+                cwd=cwd_path,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if res_simple.returncode == 0 and res_simple.stdout.strip():
+                user_email = res_simple.stdout.strip()
+                email_source = "global"
+    except Exception:
+        pass
+
+    if name_source and email_source:
+        if name_source == email_source:
+            origin_source = name_source
+        else:
+            origin_source = f"{name_source}/{email_source}"
+    elif name_source:
+        origin_source = name_source
+    elif email_source:
+        origin_source = email_source
+    else:
+        origin_source = "none"
+
+    identity_ok = bool(user_name and user_email)
+    return user_name, user_email, origin_source, identity_ok
 
 
 class EnvironmentInspector:
@@ -150,6 +248,11 @@ class EnvironmentInspector:
         git_available = False
         git_version = None
         git_path = shutil.which("git")
+        git_user_name = None
+        git_user_email = None
+        git_identity_source = "none"
+        git_identity_ok = False
+
         try:
             res = subprocess.run(
                 ["git", "--version"],
@@ -160,6 +263,7 @@ class EnvironmentInspector:
             if res.returncode == 0:
                 git_available = True
                 git_version = res.stdout.strip().replace("git version", "").strip()
+                git_user_name, git_user_email, git_identity_source, git_identity_ok = inspect_git_identity(self.project_root)
         except Exception:
             git_available = False
 
@@ -180,7 +284,6 @@ class EnvironmentInspector:
             package_version = importlib.metadata.version("GitPilot")
             package_installed = True
         except Exception:
-            # Fallback check if importable
             if importlib.util.find_spec("gitpilot") is not None:
                 package_installed = True
                 package_version = "source/local"
@@ -199,7 +302,6 @@ class EnvironmentInspector:
         # Scripts directory & GitPilot executable detection
         scripts_dir = sysconfig.get_path("scripts")
         if not scripts_dir or not os.path.exists(scripts_dir):
-            # Fallback for user base scripts on POSIX/Windows if needed
             if hasattr(sys, 'user_base'):
                 user_scripts = os.path.join(sys.user_base, 'Scripts' if sys.platform == 'win32' else 'bin')
                 if os.path.exists(user_scripts):
@@ -208,7 +310,6 @@ class EnvironmentInspector:
         exec_name = "gitpilot.exe" if sys.platform == "win32" else "gitpilot"
         gitpilot_exec_path = None
         
-        # Check standard places for gitpilot executable
         found_which = shutil.which("gitpilot")
         if found_which:
             gitpilot_exec_path = found_which
@@ -236,7 +337,7 @@ class EnvironmentInspector:
                             user_path_configured = True
                     except FileNotFoundError:
                         user_path_configured = False
-            except Exception as e:
+            except Exception:
                 user_path_restricted = True
 
         # Module mode execution check
@@ -265,6 +366,10 @@ class EnvironmentInspector:
             git_available=git_available,
             git_version=git_version,
             git_path=git_path,
+            git_user_name=git_user_name,
+            git_user_email=git_user_email,
+            git_identity_source=git_identity_source,
+            git_identity_ok=git_identity_ok,
             is_source_tree=is_source_tree,
             package_installed=package_installed,
             package_version=package_version,
@@ -283,44 +388,96 @@ class EnvironmentInspector:
         status = self.inspect_environment()
         print("=== GitPilot Environment Doctor ===")
         print("")
-        print(f"Python:       [{'OK' if status.python_ok else 'FAIL'}] {status.python_version} ({status.python_path})")
-        if not status.python_ok:
-            print(f"              Requires Python {status.python_min_req}")
-        
-        if status.is_venv:
-            print(f"Virtualenv:   [ACTIVE] {status.venv_path}")
-        else:
-            print(f"Virtualenv:   [NONE] User/System site mode")
 
-        print(f"pip:          [{'OK' if status.pip_available else 'FAIL'}] {status.pip_version or 'Not found'}")
-        print(f"Git:          [{'OK' if status.git_available else 'FAIL'}] {status.git_version or 'Not found'} ({status.git_path or 'N/A'})")
-        print(f"Context:      {'Source Tree' if status.is_source_tree else 'Installed Package Context'}")
-        print(f"GitPilot:     [{'OK' if status.package_installed else 'MISSING'}] {status.package_version or 'Not installed'}")
-        print(f"watchdog:     [{'OK' if status.watchdog_installed else 'MISSING'}] {status.watchdog_version or 'Not installed'}")
-        print(f"Scripts Dir:  {status.scripts_dir}")
-        print(f"Executable:   {status.gitpilot_exec_path or 'Not generated yet'}")
-        print(f"CLI PATH:     [{'OK' if status.cli_in_path else 'WARN'}] {'Available in PATH' if status.cli_in_path else 'Missing from process PATH'}")
-        
-        if sys.platform == "win32":
-            path_reg_str = "Configured in HKCU\\Environment" if status.user_path_configured else ("Restricted by system policy" if status.user_path_restricted else "Not configured in HKCU\\Environment")
-            print(f"User PATH:    [{'OK' if status.user_path_configured else 'WARN'}] {path_reg_str}")
-        
-        print(f"Module Mode:  [{'OK' if status.module_mode_working else 'FAIL'}] python -m gitpilot is {'working' if status.module_mode_working else 'unavailable'}")
-        print("")
-        
-        if not status.python_ok:
-            print(f"[X] Doctor check failed: Python {status.python_min_req} or newer required.")
-            return 3
-        elif not status.git_available:
-            print("[!] Doctor recommendation: Git is not installed. Please install Git to continue.")
+        if not status.git_available:
+            print("Git")
+            print("[X] Git is not installed or not available in PATH.")
+            print("")
+            print("GitPilot requires Git.")
+            print("")
+            print("GitPilot cannot perform:")
+            print("  - git add")
+            print("  - git commit")
+            print("  - git push")
+            print("  - git fetch")
+            print("  - git merge")
+            print("  - git rebase")
+            print("")
+            print("Please install Git using your organization's approved installation method,")
+            print("then reopen the terminal and run:")
+            print("")
+            print("    python -m gitpilot doctor")
+            print("")
             return 2
+
+        print("Python")
+        print(f"[{'OK' if status.python_ok else 'FAIL'}] Python {status.python_version}")
+        print(f"[{'OK' if status.python_ok else 'FAIL'}] Python executable: {status.python_path}")
+        if not status.python_ok:
+            print(f"     Requires Python {status.python_min_req}")
+        print("")
+
+        print("pip")
+        print(f"[{'OK' if status.pip_available else 'FAIL'}] pip {status.pip_version or 'Not found'}")
+        print("")
+
+        print("Git")
+        print(f"[OK] Git detected")
+        print(f"[OK] Version: {status.git_version or 'Unknown'}")
+        print(f"[OK] Executable: {status.git_path or 'N/A'}")
+        print("")
+
+        print("Git Identity")
+        if status.git_identity_ok:
+            print(f"[OK] user.name: {status.git_user_name}")
+            print(f"[OK] user.email: {status.git_user_email}")
+            print(f"[OK] Source: {status.git_identity_source}")
+        else:
+            if status.git_user_name:
+                print(f"[OK] user.name: {status.git_user_name}")
+            else:
+                print("[!] user.name is not configured.")
+
+            if status.git_user_email:
+                print(f"[OK] user.email: {status.git_user_email}")
+            else:
+                print("[!] user.email is not configured.")
+
+            print("")
+            print("GitPilot cannot safely create commits until Git identity is configured.")
+            print("")
+            print("Configure it manually with:")
+            print("")
+            if not status.git_user_name:
+                print('    git config --global user.name "Your Name"')
+            if not status.git_user_email:
+                print('    git config --global user.email "you@example.com"')
+
+        print("")
+        print("GitPilot")
+        print(f"[{'OK' if status.package_installed else 'MISSING'}] Package installed ({status.package_version or 'N/A'})")
+        print(f"[{'OK' if status.watchdog_installed else 'MISSING'}] Dependencies available (watchdog {status.watchdog_version or 'N/A'})")
+        print(f"[{'OK' if status.gitpilot_exec_path else 'WARN'}] CLI available ({status.gitpilot_exec_path or 'python -m gitpilot fallback'})")
+        print("")
+
+        print("Environment")
+        print(f"[{'OK' if status.cli_in_path else 'WARN'}] PATH ({'Available in PATH' if status.cli_in_path else 'Missing from process PATH'})")
+        print(f"[{'OK' if status.module_mode_working else 'FAIL'}] Module execution (python -m gitpilot working)")
+        print("")
+
+        if not status.python_ok:
+            print("Overall Status: UNHEALTHY (Python version unsupported)")
+            return 3
+        elif not status.git_identity_ok:
+            print("Overall Status: WARNING (Git identity incomplete)")
+            return 0
         elif not status.cli_in_path:
-            print("Recommended action:")
-            print("    python -m gitpilot setup")
+            print("Overall Status: HEALTHY (Module mode active)")
             return 0
         else:
-            print("GitPilot environment is healthy.")
+            print("Overall Status: HEALTHY")
             return 0
+
 
 
 class BootstrapManager:
