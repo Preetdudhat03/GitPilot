@@ -576,14 +576,30 @@ class BootstrapManager:
 
         # 3. Check Git
         if status.git_available:
-            print(f"[OK] Git detected: {status.git_version}")
+            print(f"[OK] Git detected: Version {status.git_version or 'Unknown'}")
             if verbose and status.git_path:
                 print(f"     Location: {status.git_path}")
+            
+            if status.git_identity_ok:
+                print(f"[OK] Git identity configured ({status.git_user_name} <{status.git_user_email}>)")
+            else:
+                print("[!] Git identity is incomplete.")
+                print("    Please configure your Git identity manually:")
+                if not status.git_user_name:
+                    print('        git config --global user.name "Your Name"')
+                if not status.git_user_email:
+                    print('        git config --global user.email "you@example.com"')
+                warnings.append("Git identity incomplete")
         else:
-            print("[X] Git was not found. GitPilot requires Git.")
-            print("    Please install Git and restart your terminal.")
-            errors.append("Git not installed")
+            print("[X] Git dependency is missing.")
+            print("")
+            print("    GitPilot cannot install Git automatically because installation")
+            print("    may require administrator approval or organizational policy.")
+            print("")
+            print("    Please install Git using your organization's approved method and restart your terminal.")
+            errors.append("Git dependency is missing")
             return SetupResult(success=False, exit_code=2, status=status, errors=errors)
+
 
         # 4. Check & Install GitPilot package / dependencies
         print("\nChecking GitPilot installation & dependencies...")
