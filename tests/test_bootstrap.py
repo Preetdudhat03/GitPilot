@@ -319,5 +319,74 @@ class TestBootstrap(unittest.TestCase):
         """12. Verify gitpilot.__main__ exists and is importable."""
         self.assertTrue(hasattr(main_module, "main"))
 
+    def test_doctor_missing_git_identity_warning(self):
+        """13. Verify doctor outputs warning state when Git identity is incomplete."""
+        inspector = EnvironmentInspector()
+        with patch.object(inspector, "inspect_environment") as mock_inspect:
+            mock_inspect.return_value = EnvironmentStatus(
+                python_version="3.12.0",
+                python_path="/bin/python",
+                python_ok=True,
+                python_min_req=">=3.8",
+                is_venv=True,
+                venv_path="/path/to/venv",
+                pip_available=True,
+                pip_version="24.0",
+                git_available=True,
+                git_version="2.40.0",
+                git_path="/usr/bin/git",
+                git_user_name=None,
+                git_user_email=None,
+                git_identity_source="none",
+                git_identity_ok=False,
+                is_source_tree=True,
+                package_installed=True,
+                package_version="1.2.0",
+                watchdog_installed=True,
+                watchdog_version="3.0.0",
+                scripts_dir="/path/to/venv/bin",
+                gitpilot_exec_path="/path/to/venv/bin/gitpilot",
+                cli_in_path=True,
+                user_path_configured=True,
+                user_path_restricted=False,
+                module_mode_working=True
+            )
+            exit_code = inspector.run_doctor()
+            self.assertEqual(exit_code, 0)
+
+    def test_setup_missing_git_returns_exit_code_2(self):
+        """14. Verify setup returns exit code 2 when Git is missing and does NOT attempt Git installation."""
+        manager = BootstrapManager()
+        with patch.object(manager.inspector, "inspect_environment") as mock_inspect:
+            mock_inspect.return_value = EnvironmentStatus(
+                python_version="3.12.0",
+                python_path="/bin/python",
+                python_ok=True,
+                python_min_req=">=3.8",
+                is_venv=True,
+                venv_path="/path/to/venv",
+                pip_available=True,
+                pip_version="24.0",
+                git_available=False,
+                git_version=None,
+                git_path=None,
+                is_source_tree=True,
+                package_installed=True,
+                package_version="1.2.0",
+                watchdog_installed=True,
+                watchdog_version="3.0.0",
+                scripts_dir="/path/to/venv/bin",
+                gitpilot_exec_path=None,
+                cli_in_path=False,
+                user_path_configured=False,
+                user_path_restricted=False,
+                module_mode_working=True
+            )
+            res = manager.run_setup(dry_run=False)
+            self.assertEqual(res.exit_code, 2)
+            self.assertFalse(res.success)
+            self.assertIn("Git dependency is missing", res.errors)
+
 if __name__ == "__main__":
     unittest.main()
+
