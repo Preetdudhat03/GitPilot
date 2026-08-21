@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](https://github.com/Preetdudhat03/GitPilot)
-[![Tests](https://img.shields.io/badge/tests-64%20passed-success.svg)](https://github.com/Preetdudhat03/GitPilot)
+[![Tests](https://img.shields.io/badge/tests-73%20passed-success.svg)](https://github.com/Preetdudhat03/GitPilot)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](pyproject.toml)
 
 **Repository**: [https://github.com/Preetdudhat03/GitPilot](https://github.com/Preetdudhat03/GitPilot)
