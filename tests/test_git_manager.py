@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 from gitpilot.git_manager import GitManager, GitError
 from gitpilot.status import RepositoryState
 
