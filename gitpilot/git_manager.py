@@ -328,9 +328,94 @@ class GitManager:
         diff_names = self._run_git("diff", "--cached", "--name-only")
         return [f.strip() for f in diff_names.splitlines() if f.strip()]
 
+    def get_user_identity(self) -> Tuple[Optional[str], Optional[str], str, bool]:
+        """
+        Safely inspects the effective Git user.name, user.email, and origin source.
+        Returns (user_name, user_email, origin_source, identity_ok).
+        """
+        user_name = None
+        user_email = None
+        name_source = None
+        email_source = None
+
+        try:
+            out_n = self._run_git("config", "--show-origin", "--get", "user.name", check=False)
+            if out_n and "\t" in out_n:
+                origin_str, val = out_n.split("\t", 1)
+                user_name = val.strip()
+                name_source = self._parse_config_origin(origin_str)
+            elif out_n and not out_n.startswith("error") and not out_n.startswith("Git"):
+                out_simple = self._run_git("config", "--get", "user.name", check=False)
+                if out_simple and not out_simple.startswith("error"):
+                    user_name = out_simple.strip()
+                    name_source = "global"
+
+            out_e = self._run_git("config", "--show-origin", "--get", "user.email", check=False)
+            if out_e and "\t" in out_e:
+                origin_str, val = out_e.split("\t", 1)
+                user_email = val.strip()
+                email_source = self._parse_config_origin(origin_str)
+            elif out_e and not out_e.startswith("error") and not out_e.startswith("Git"):
+                out_simple_e = self._run_git("config", "--get", "user.email", check=False)
+                if out_simple_e and not out_simple_e.startswith("error"):
+                    user_email = out_simple_e.strip()
+                    email_source = "global"
+
+        except Exception:
+            pass
+
+        if name_source and email_source:
+            if name_source == email_source:
+                origin_source = name_source
+            else:
+                origin_source = f"{name_source}/{email_source}"
+        elif name_source:
+            origin_source = name_source
+        elif email_source:
+            origin_source = email_source
+        else:
+            origin_source = "none"
+
+        identity_ok = bool(user_name and user_email)
+        return user_name, user_email, origin_source, identity_ok
+
+    @staticmethod
+    def _parse_config_origin(origin_str: str) -> str:
+        """Parses git config origin string to identify local, global, or system scope."""
+        s = origin_str.lower()
+        if ".git/config" in s or ".git\\config" in s or "local" in s:
+            return "local"
+        elif ".gitconfig" in s or "global" in s or "home" in s or "appdata" in s or "users" in s:
+            return "global"
+        elif "etc" in s or "system" in s or "program files" in s:
+            return "system"
+        return "global"
+
+    def has_valid_identity(self) -> bool:
+        """Returns True if both user.name and user.email are configured."""
+        _, _, _, identity_ok = self.get_user_identity()
+        return identity_ok
+
     def commit(self, message: str) -> None:
-        """Creates a commit with the given message."""
-        self._run_git("commit", "-m", message)
+        """Creates a commit with the given message, handling identity errors gracefully."""
+        try:
+            self._run_git("commit", "-m", message)
+        except GitError as e:
+            err_str = str(e)
+            if any(k in err_str.lower() for k in ["author identity unknown", "please tell me who you are"]):
+                user_name, user_email, _, _ = self.get_user_identity()
+                cmd_hints = []
+                if not user_name:
+                    cmd_hints.append('git config --global user.name "Your Name"')
+                if not user_email:
+                    cmd_hints.append('git config --global user.email "you@example.com"')
+                hint_str = "\n".join(f"    {c}" for c in cmd_hints)
+                raise GitError(
+                    f"Git identity is not configured (Author identity unknown).\n"
+                    f"Automatic commits are paused. Configure your Git identity using:\n{hint_str}"
+                )
+            raise
+
 
     def is_remote_ahead(self, remote: str, branch: str) -> bool:
         """
