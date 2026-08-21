@@ -76,18 +76,24 @@ class GitEventHandler(FileSystemEventHandler):
     def on_moved(self, event: FileSystemEvent): self._on_event(event)
 
     def _reset_timer(self):
-        """Resets the debounce timer in a thread-safe way."""
+        """Resets the debounce timer in a thread-safe way, logging only once per change burst."""
         with self._lock:
+            is_new_burst = (self.timer is None)
             if self.timer:
                 self.timer.cancel()
             
             self.timer = threading.Timer(self.config.delay, self._trigger_pipeline)
             self.timer.daemon = True
             self.timer.start()
-            logger.info(f"Change detected. Waiting {self.config.delay} seconds for inactivity...")
+
+            if is_new_burst:
+                logger.info("Change detected. Waiting for inactivity...")
 
     def _trigger_pipeline(self):
         """Called when the debounce timer expires."""
+        with self._lock:
+            self.timer = None
+
         if self.watcher and self.watcher.mode == "limited":
             logger.warning("[LIMITED MODE] Changes detected, but automatic commit/push is paused because repository requires synchronization.")
             logger.info("Run 'gitpilot sync' or resolve conflicts manually to enable Active Mode.")
@@ -130,9 +136,10 @@ class GitPilotWatcher:
 
     def start(self):
         """Starts watching the directory and background fetching."""
-        logger.info(f"Watching for changes in {self.repo_path} [Mode: {self.mode.upper()}]")
-        logger.info(f"Inactivity delay set to {self.handler.config.delay} seconds.")
+        delay_str = f"{self.handler.config.delay}s"
+        logger.info(f"Watching for changes... [Mode: {self.mode.upper()}, Inactivity Delay: {delay_str}]")
         self.observer.start()
+
 
         if hasattr(self.pipeline, 'monitor') and self.pipeline.monitor:
             self.pipeline.monitor.start_background_fetch()
