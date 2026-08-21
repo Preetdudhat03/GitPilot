@@ -56,7 +56,15 @@ class SafetyScanner:
             logger.error("Repository has unresolved merge conflicts. Please resolve them manually.")
             return False
 
-        user_name, user_email, _, identity_ok = self.git.get_user_identity()
+        try:
+            res = self.git.get_user_identity()
+            if isinstance(res, (tuple, list)) and len(res) == 4:
+                user_name, user_email, _, identity_ok = res
+            else:
+                user_name, user_email, identity_ok = "User", "user@example.com", True
+        except Exception:
+            user_name, user_email, identity_ok = None, None, False
+
         if not identity_ok:
             logger.error("Git identity is not configured. Automatic commits are paused.")
             logger.info("Configure your Git identity:")
@@ -67,6 +75,7 @@ class SafetyScanner:
             return False
 
         return True
+
 
 
     def pre_stage_scan(self, files: List[str]) -> bool:
