@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from gitpilot.config import ConfigManager
-from gitpilot.logger import setup_logger, SUCCESS_SYMBOL
+from gitpilot.logger import setup_logger, SUCCESS_SYMBOL, print_success
 from gitpilot.git_manager import GitManager, GitError
 from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import RuleBasedCommitGenerator
@@ -80,11 +80,11 @@ def cmd_watch(args, repo_path: Path):
         sys.exit(1)
         
     print_banner()
-    logger.info(f"{SUCCESS_SYMBOL} Repository detected")
-    logger.info(f"{SUCCESS_SYMBOL} Watching branch: {pipeline.git.get_current_branch()}")
-    logger.info(f"{SUCCESS_SYMBOL} Remote: {pipeline.config.remote}")
-    logger.info(f"{SUCCESS_SYMBOL} Auto-push: {'enabled' if pipeline.config.auto_push else 'disabled'}")
-    logger.info(f"{SUCCESS_SYMBOL} Auto-sync: {'enabled (' + pipeline.config.sync_strategy + ')' if pipeline.config.auto_sync else 'disabled'}")
+    print_success(f"Repository: {repo_path.name}")
+    print_success(f"Watching branch: {pipeline.git.get_current_branch()}")
+    print_success(f"Remote: {pipeline.config.remote}")
+    print_success(f"Auto-push: {'enabled' if pipeline.config.auto_push else 'disabled'}")
+    print_success(f"Auto-sync: {'enabled (' + pipeline.config.sync_strategy + ')' if pipeline.config.auto_sync else 'disabled'}")
     
     if args.dry_run:
         logger.warning("DRY RUN MODE ENABLED. No changes will be committed.")
