@@ -471,6 +471,15 @@ class EnvironmentInspector:
         print(f"[{'OK' if status.module_mode_working else 'FAIL'}] Module execution (python -m gitpilot working)")
         print("")
 
+        if not status.watchdog_installed:
+            print("Runtime")
+            print("[!] GitPilot watch command is unavailable until dependencies are installed")
+            print("")
+            print("Recommendation:")
+            print("")
+            print("    python -m gitpilot setup")
+            print("")
+
         if not status.python_ok:
             print("Overall Status: UNHEALTHY (Python version unsupported)")
             return 3
@@ -597,18 +606,70 @@ class BootstrapManager:
                     print('        git config --global user.email "you@example.com"')
                 warnings.append("Git identity incomplete")
         else:
-            print("[X] Git dependency is missing.")
+            print("[X] Git was not found.")
             print("")
-            print("    GitPilot cannot install Git automatically because installation")
-            print("    may require administrator approval or organizational policy.")
+            print("    GitPilot requires Git for repository automation.")
             print("")
-            print("    Please install Git using your organization's approved method and restart your terminal.")
+            print("    GitPilot will NOT attempt administrator elevation")
+            print("    or bypass system policy.")
+            print("")
+            print("    Install Git using your organization's approved method,")
+            print("    reopen the terminal, and run:")
+            print("")
+            print("        python -m gitpilot doctor")
+            print("")
             errors.append("Git dependency is missing")
             return SetupResult(success=False, exit_code=2, status=status, errors=errors)
 
 
-        # 4. Check & Install GitPilot package / dependencies
-        print("\nChecking GitPilot installation & dependencies...")
+        # 4. Check & Install declared project dependencies dynamically
+        print("\nChecking GitPilot dependencies...")
+        declared_deps = get_project_dependencies(self.inspector.project_root / "pyproject.toml")
+        if not declared_deps:
+            declared_deps = ["watchdog>=3.0.0"]
+
+        for dep in declared_deps:
+            dep_name = re.split(r'[<>=!~\s(]', dep)[0].strip()
+            if not dep_name:
+                continue
+            dep_installed = False
+            dep_version = None
+            try:
+                dep_version = importlib.metadata.version(dep_name)
+                dep_installed = True
+            except Exception:
+                if importlib.util.find_spec(dep_name) is not None:
+                    dep_installed = True
+                    dep_version = "available"
+
+            if dep_installed:
+                print(f"[OK] {dep_name} dependency available ({dep_version})")
+            else:
+                print(f"[!] {dep_name} dependency is missing.")
+                if dry_run:
+                    print(f"[WOULD CHANGE] Install {dep} dependency")
+                    actions_performed.append(f"Would install {dep}")
+                else:
+                    print(f"Installing required dependency '{dep}'...")
+                    try:
+                        cmd = [sys.executable, "-m", "pip", "install"]
+                        if not status.is_venv:
+                            cmd.append("--user")
+                        cmd.append(dep)
+
+                        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                        if res.returncode == 0:
+                            print(f"[OK] {dep_name} dependency installed")
+                            actions_performed.append(f"Installed {dep} dependency")
+                        else:
+                            print(f"[X] Failed to install {dep}: {res.stderr.strip()}")
+                            errors.append(f"Failed to install {dep}")
+                    except Exception as e:
+                        print(f"[X] Failed to install {dep}: {e}")
+                        errors.append(str(e))
+
+        # 5. Check & Install GitPilot package
+        print("\nChecking GitPilot package installation...")
         if status.package_installed and not repair:
             print(f"[OK] GitPilot package installed ({status.package_version})")
         else:
@@ -638,56 +699,11 @@ class BootstrapManager:
                     print(f"[X] Failed to install package: {e}")
                     errors.append(str(e))
 
-        # Check & Install declared project dependencies dynamically
-        declared_deps = get_project_dependencies(self.inspector.project_root / "pyproject.toml")
-        if not declared_deps:
-            print("[!] Unable to determine GitPilot dependencies from package metadata or pyproject.toml.")
-            print("    Please verify pyproject.toml or reinstall GitPilot.")
-            warnings.append("Unable to determine package dependencies")
-
-        for dep in declared_deps:
-
-            dep_name = re.split(r'[<>=!~]', dep)[0].strip()
-            dep_installed = False
-            dep_version = None
-            try:
-                dep_version = importlib.metadata.version(dep_name)
-                dep_installed = True
-            except Exception:
-                if importlib.util.find_spec(dep_name) is not None:
-                    dep_installed = True
-                    dep_version = "available"
-
-            if dep_installed:
-                print(f"[OK] {dep_name} dependency available ({dep_version})")
-            else:
-                if dry_run:
-                    print(f"[WOULD CHANGE] Install {dep} dependency")
-                    actions_performed.append(f"Would install {dep}")
-                else:
-                    print(f"Installing {dep} dependency...")
-                    try:
-                        cmd = [sys.executable, "-m", "pip", "install"]
-                        if not status.is_venv:
-                            cmd.append("--user")
-                        cmd.append(dep)
-
-                        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                        if res.returncode == 0:
-                            print(f"[OK] {dep} dependency installed")
-                            actions_performed.append(f"Installed {dep} dependency")
-                        else:
-                            print(f"[X] Failed to install {dep}: {res.stderr.strip()}")
-                            errors.append(f"Failed to install {dep}")
-                    except Exception as e:
-                        print(f"[X] Failed to install {dep}: {e}")
-                        errors.append(str(e))
-
 
         # Re-inspect status after package actions
         status = self.inspector.inspect_environment()
 
-        # 5. Check PATH & Executable Availability
+        # 6. Check PATH & Executable Availability
         print("\nChecking PATH & executable availability...")
         path_repaired = False
         user_restricted = False
