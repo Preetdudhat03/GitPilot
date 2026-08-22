@@ -387,6 +387,85 @@ class TestBootstrap(unittest.TestCase):
             self.assertFalse(res.success)
             self.assertIn("Git dependency is missing", res.errors)
 
+    def test_doctor_missing_watchdog(self):
+        """15. Verify doctor executes cleanly without crashing when watchdog is missing."""
+        inspector = EnvironmentInspector()
+        with patch.object(inspector, "inspect_environment") as mock_inspect:
+            mock_inspect.return_value = EnvironmentStatus(
+                python_version="3.12.0",
+                python_path="/bin/python",
+                python_ok=True,
+                python_min_req=">=3.8",
+                is_venv=True,
+                venv_path="/path/to/venv",
+                pip_available=True,
+                pip_version="24.0",
+                git_available=True,
+                git_version="2.40.0",
+                git_path="/usr/bin/git",
+                is_source_tree=True,
+                package_installed=True,
+                package_version="1.2.0",
+                watchdog_installed=False,
+                watchdog_version=None,
+                scripts_dir="/path/to/venv/bin",
+                gitpilot_exec_path="/path/to/venv/bin/gitpilot",
+                cli_in_path=True,
+                user_path_configured=True,
+                user_path_restricted=False,
+                module_mode_working=True
+            )
+            exit_code = inspector.run_doctor()
+            self.assertEqual(exit_code, 0)
+
+    @patch("gitpilot.bootstrap.subprocess.run")
+    def test_setup_installs_missing_watchdog_with_sys_executable(self, mock_subproc):
+        """16. Verify setup detects missing watchdog and installs it using sys.executable -m pip."""
+        mock_res = MagicMock()
+        mock_res.returncode = 0
+        mock_res.stdout = "Successfully installed watchdog"
+        mock_subproc.return_value = mock_res
+
+        manager = BootstrapManager()
+        with patch.object(manager.inspector, "inspect_environment") as mock_inspect, \
+             patch("gitpilot.bootstrap.get_project_dependencies", return_value=["watchdog>=3.0.0"]):
+            mock_inspect.return_value = EnvironmentStatus(
+                python_version="3.12.0",
+                python_path="/bin/python",
+                python_ok=True,
+                python_min_req=">=3.8",
+                is_venv=True,
+                venv_path="/path/to/venv",
+                pip_available=True,
+                pip_version="24.0",
+                git_available=True,
+                git_version="2.40.0",
+                git_path="/usr/bin/git",
+                is_source_tree=True,
+                package_installed=True,
+                package_version="1.2.0",
+                watchdog_installed=False,
+                watchdog_version=None,
+                scripts_dir="/path/to/venv/bin",
+                gitpilot_exec_path="/path/to/venv/bin/gitpilot",
+                cli_in_path=True,
+                user_path_configured=True,
+                user_path_restricted=False,
+                module_mode_working=True
+            )
+            res = manager.run_setup(dry_run=False)
+            self.assertTrue(res.success)
+            self.assertIn("Installed watchdog>=3.0.0 dependency", res.actions_performed)
+
+            # Verify sys.executable -m pip was called for watchdog installation
+            pip_calls = [call for call in mock_subproc.call_args_list if "-m" in call[0][0] and "pip" in call[0][0]]
+            self.assertTrue(len(pip_calls) > 0)
+            first_cmd = pip_calls[0][0][0]
+            self.assertEqual(first_cmd[0], sys.executable)
+            self.assertIn("watchdog>=3.0.0", first_cmd)
+            self.assertNotIn("--user", first_cmd)  # inside venv
+
 if __name__ == "__main__":
     unittest.main()
+
 
