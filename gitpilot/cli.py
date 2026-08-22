@@ -72,6 +72,15 @@ def cmd_init(args, repo_path: Path):
 def cmd_watch(args, repo_path: Path):
     """Starts the file system watcher with automatic initial synchronization."""
     logger = setup_logger(args.verbose)
+    try:
+        from gitpilot.watcher import GitPilotWatcher
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.error("[!] GitPilot watch command is unavailable until required dependencies are installed.")
+        logger.error(f"    Missing dependency: {e}")
+        logger.error("    Please run the following command to bootstrap GitPilot:")
+        logger.error("        python -m gitpilot setup")
+        sys.exit(1)
+
     pipeline = get_pipeline(repo_path, args.verbose)
     
     if not pipeline.git.is_git_repo():
@@ -113,15 +122,6 @@ def cmd_watch(args, repo_path: Path):
         logger.warning("    Automatic commits and pushes are paused until repository synchronization completes.")
         logger.info("    Run 'gitpilot sync' or resolve conflicts manually to activate automatic commits.")
 
-
-    try:
-        from gitpilot.watcher import GitPilotWatcher
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.error("[!] GitPilot watch command is unavailable until required dependencies are installed.")
-        logger.error(f"    Missing dependency: {e}")
-        logger.error("    Please run the following command to bootstrap GitPilot:")
-        logger.error("        python -m gitpilot setup")
-        sys.exit(1)
 
     watcher = GitPilotWatcher(repo_path, pipeline.config, pipeline, dry_run=args.dry_run, initial_mode=initial_mode)
     watcher.start()
