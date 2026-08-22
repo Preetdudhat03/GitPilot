@@ -60,5 +60,19 @@ class TestCLI(unittest.TestCase):
 
         self.assertEqual(cm.exception.code, 1)
 
+    @patch('gitpilot.cli.get_pipeline')
+    def test_cmd_watch_missing_watchdog(self, mock_get_pipeline):
+        mock_pipeline = MagicMock()
+        mock_pipeline.git.is_git_repo.return_value = True
+        mock_get_pipeline.return_value = mock_pipeline
+        args = argparse.Namespace(verbose=False, dry_run=False)
+
+        with patch.dict('sys.modules', {'gitpilot.watcher': None}):
+            with self.assertRaises(SystemExit) as cm:
+                from gitpilot.cli import cmd_watch
+                cmd_watch(args, Path("/mock"))
+            self.assertEqual(cm.exception.code, 1)
+
 if __name__ == '__main__':
     unittest.main()
+
