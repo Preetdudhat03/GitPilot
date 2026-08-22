@@ -63,6 +63,14 @@ Running `gitpilot setup` repeatedly produces identical, non-destructive results.
 ### Principle 4: Single Source of Truth for Python Requirement
 The required Python version is dynamically extracted from `pyproject.toml` (`requires-python = ">=3.8"`), guaranteeing consistency between packaging configuration and CLI environment enforcement.
 
+### Principle 5: Two-Layer Architecture & Bootstrap Independence
+To allow `python -m gitpilot setup` and `python -m gitpilot doctor` to execute on fresh PCs without pre-installed runtime dependencies, GitPilot strictly enforces a two-layer architecture:
+
+- **Layer 1 (Bootstrap Layer)**: `gitpilot/__main__.py`, `gitpilot/cli.py` (CLI dispatcher), and `gitpilot/bootstrap.py` (`EnvironmentInspector` & `BootstrapManager`). Depends ONLY on Python standard library modules and guaranteed components.
+- **Layer 2 (Runtime Layer)**: `gitpilot/watcher.py`, `gitpilot/pipeline.py`, `gitpilot/monitor.py`, etc. May require third-party dependencies such as `watchdog`.
+
+By lazily importing `GitPilotWatcher` inside `cmd_watch()` rather than at top-level `cli.py` module load time, the bootstrap commands (`setup` and `doctor`) start cleanly on fresh machines without triggering `ModuleNotFoundError`.
+
 ---
 
 ## 3. Code Implementation & Breakdown
