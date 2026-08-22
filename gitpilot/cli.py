@@ -10,7 +10,6 @@ from gitpilot.git_manager import GitManager, GitError
 from gitpilot.safety import SafetyScanner
 from gitpilot.commit_generator import RuleBasedCommitGenerator
 from gitpilot.pipeline import GitPilotPipeline
-from gitpilot.watcher import GitPilotWatcher
 from gitpilot.status import RepositoryState
 
 def print_banner():
@@ -114,6 +113,15 @@ def cmd_watch(args, repo_path: Path):
         logger.warning("    Automatic commits and pushes are paused until repository synchronization completes.")
         logger.info("    Run 'gitpilot sync' or resolve conflicts manually to activate automatic commits.")
 
+
+    try:
+        from gitpilot.watcher import GitPilotWatcher
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.error("[!] GitPilot watch command is unavailable until required dependencies are installed.")
+        logger.error(f"    Missing dependency: {e}")
+        logger.error("    Please run the following command to bootstrap GitPilot:")
+        logger.error("        python -m gitpilot setup")
+        sys.exit(1)
 
     watcher = GitPilotWatcher(repo_path, pipeline.config, pipeline, dry_run=args.dry_run, initial_mode=initial_mode)
     watcher.start()

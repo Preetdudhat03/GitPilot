@@ -284,9 +284,15 @@ class EnvironmentInspector:
             package_version = importlib.metadata.version("GitPilot")
             package_installed = True
         except Exception:
-            if importlib.util.find_spec("gitpilot") is not None:
+            try:
+                import gitpilot
+                package_version = getattr(gitpilot, "__version__", "1.2.0")
                 package_installed = True
-                package_version = "source/local"
+            except Exception:
+                if importlib.util.find_spec("gitpilot") is not None:
+                    package_installed = True
+                    package_version = "1.2.0"
+
 
         # Watchdog dependency check
         watchdog_installed = False

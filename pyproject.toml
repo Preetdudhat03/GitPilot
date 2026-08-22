@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "GitPilot"
-version = "1.1.0"
-description = "A developer productivity CLI tool that safely automates git commits and pushes."
+version = "1.2.0"
+description = "A safety-first Git automation CLI tool that watches repositories, generates conventional commits, and manages remote sync."
 authors = [
     {name = "Preet Dudhat", email = "dudhatpreet20@gmail.com"}
 ]
