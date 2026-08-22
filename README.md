@@ -222,25 +222,84 @@ Run `python -m gitpilot doctor` or check the output of `python -m gitpilot setup
 
 #### Step 2: Add Path to Environment Variables
 
-**Windows (GUI Method):**
-1. Press `Win + R`, type `sysdm.cpl` and press **Enter** (or search *"Edit environment variables for your account"* in Windows Start Menu).
-2. Click the **Advanced** tab and click **Environment Variables...**.
+##### Option A: Windows (GUI Method)
+1. Press `Win + R`, type `sysdm.cpl` and press **Enter** (or search *"Edit environment variables for your account"* in the Windows Start Menu).
+2. Select the **Advanced** tab and click **Environment Variables...**.
 3. Under **User variables for <YourUsername>** (or System variables if you have admin access), select `Path` and click **Edit...**.
 4. Click **New** and paste your Python Scripts directory (e.g., `C:\Users\<YourUsername>\AppData\Roaming\Python\Python313\Scripts`).
-5. Click **OK** on all dialogs to save.
-6. Close and open a **NEW terminal window** (Command Prompt or PowerShell) for the changes to take effect.
+5. Click **OK** on all open dialogs to save your changes.
+6. Close and open a **NEW terminal window** (Command Prompt or PowerShell) for the updated PATH to take effect.
 
-**Windows (PowerShell Method):**
-Run in PowerShell (Current User scope, no administrator elevation required):
+---
+
+##### Option B: Windows (PowerShell Method — Command Line)
+
+If you prefer using the command line on Windows, you can update your persistent User PATH using PowerShell without administrator privileges.
+
+**Command breakdown:**
+- `[Environment]::GetEnvironmentVariable("Path", "User")`: Retrieves your existing User-level PATH string stored in the Windows Registry (`HKCU\Environment`).
+- `;C:\Users\<YourUsername>...`: Appends the Python Scripts directory using a semicolon (`;`) separator.
+- `[Environment]::SetEnvironmentVariable(..., "User")`: Saves the updated PATH string back to `HKCU\Environment` permanently for your user account without needing Administrator (`runas`) elevation.
+
+**PowerShell Quick Command (Automatic Path Resolution):**
+Copy and paste this snippet directly into PowerShell (it automatically detects your active Windows username and AppData directory using `$env:APPDATA`):
+
 ```powershell
-[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";C:\Users\<YourUsername>\AppData\Roaming\Python\Python313\Scripts", "User")
+# 1. Detect your active Python Scripts directory
+$scriptsDir = "$env:APPDATA\Python\Python313\Scripts"
+
+# 2. Get current User PATH
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+
+# 3. Append scripts directory to User PATH and save to Registry
+if ($currentPath -notlike "*$scriptsDir*") {
+    [Environment]::SetEnvironmentVariable("Path", "$currentPath;$scriptsDir", "User")
+    Write-Host "[OK] User PATH updated successfully in Registry (HKCU\Environment)." -ForegroundColor Green
+    Write-Host "Please open a NEW PowerShell or Command Prompt window to use 'gitpilot'." -ForegroundColor Yellow
+} else {
+    Write-Host "[OK] Path is already configured in your User environment." -ForegroundColor Green
+}
 ```
 
-**macOS / Linux:**
-Add the directory to your shell configuration file (`~/.zshrc` or `~/.bashrc`):
+> **Important**: After running the PowerShell command, close your current terminal and open a **NEW terminal window**. Active terminal sessions only read environment variables when first opened.
+
+---
+
+##### Option C: macOS / Linux (Shell Configuration Method)
+
+On macOS and Linux, environment variables are set inside your shell startup configuration files, which run automatically every time a new terminal window or tab is opened.
+
+**Which configuration file should you edit?**
+- **macOS (Zsh — Default on macOS Catalina & newer)**: `~/.zshrc`
+- **Linux (Bash — Default on Ubuntu, Debian, Fedora, etc.)**: `~/.bashrc` or `~/.profile`
+
+**Command breakdown:**
+- `export PATH="$HOME/.local/bin:$PATH"`: Prepends `$HOME/.local/bin` (where user-installed Python binaries reside) to your `$PATH` list so your shell finds `gitpilot` first.
+- `>> ~/.zshrc`: Appends (`>>`) the `export` command to the end of your shell file without overwriting any existing settings.
+- `source ~/.zshrc`: Immediately reloads the configuration file into your current terminal session so `gitpilot` works right away without closing the window.
+
+**macOS (Zsh Terminal):**
 ```bash
+# 1. Add PATH export to ~/.zshrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+
+# 2. Reload shell configuration immediately
 source ~/.zshrc
+```
+
+**Linux (Bash Terminal):**
+```bash
+# 1. Add PATH export to ~/.bashrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+# 2. Reload shell configuration immediately
+source ~/.bashrc
+```
+
+**Verification:**
+After updating your configuration, test that the executable is accessible:
+```bash
+gitpilot doctor
 ```
 
 ---
