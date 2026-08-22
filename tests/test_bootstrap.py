@@ -428,7 +428,9 @@ class TestBootstrap(unittest.TestCase):
 
         manager = BootstrapManager()
         with patch.object(manager.inspector, "inspect_environment") as mock_inspect, \
-             patch("gitpilot.bootstrap.get_project_dependencies", return_value=["watchdog>=3.0.0"]):
+             patch("gitpilot.bootstrap.get_project_dependencies", return_value=["watchdog>=3.0.0"]), \
+             patch("importlib.metadata.version", side_effect=Exception("Not installed")), \
+             patch("importlib.util.find_spec", return_value=None):
             mock_inspect.return_value = EnvironmentStatus(
                 python_version="3.12.0",
                 python_path="/bin/python",
