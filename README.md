@@ -211,6 +211,38 @@ You can execute all GitPilot commands on restricted PCs using:
 python -m gitpilot <command>
 ```
 
+### Manual PATH Configuration (If Automatic Setup is Blocked)
+
+If system policy prevents `gitpilot setup` from automatically updating your User PATH, you can manually add the Python Scripts directory to your Environment Variables so the `gitpilot` command works directly from any terminal window.
+
+#### Step 1: Find your Python Scripts Directory
+Run `python -m gitpilot doctor` or check the output of `python -m gitpilot setup`. It will display your executable directory, for example:
+- **Windows**: `C:\Users\<YourUsername>\AppData\Roaming\Python\Python313\Scripts`
+- **macOS/Linux**: `/home/<username>/.local/bin`
+
+#### Step 2: Add Path to Environment Variables
+
+**Windows (GUI Method):**
+1. Press `Win + R`, type `sysdm.cpl` and press **Enter** (or search *"Edit environment variables for your account"* in Windows Start Menu).
+2. Click the **Advanced** tab and click **Environment Variables...**.
+3. Under **User variables for <YourUsername>** (or System variables if you have admin access), select `Path` and click **Edit...**.
+4. Click **New** and paste your Python Scripts directory (e.g., `C:\Users\<YourUsername>\AppData\Roaming\Python\Python313\Scripts`).
+5. Click **OK** on all dialogs to save.
+6. Close and open a **NEW terminal window** (Command Prompt or PowerShell) for the changes to take effect.
+
+**Windows (PowerShell Method):**
+Run in PowerShell (Current User scope, no administrator elevation required):
+```powershell
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";C:\Users\<YourUsername>\AppData\Roaming\Python\Python313\Scripts", "User")
+```
+
+**macOS / Linux:**
+Add the directory to your shell configuration file (`~/.zshrc` or `~/.bashrc`):
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
 ---
 
 ## Environment Diagnostics (`gitpilot doctor`)
