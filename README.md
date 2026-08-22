@@ -173,7 +173,7 @@ This command inspects your Python environment, checks Git & Git identity, instal
 
 ### 3. Verify Health
 ```bash
-gitpilot doctor
+python -m gitpilot doctor
 ```
 
 
