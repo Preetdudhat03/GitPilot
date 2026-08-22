@@ -166,7 +166,10 @@ Execute setup using Python module mode:
 ```bash
 python -m gitpilot setup
 ```
-This command inspects your Python environment, installs required dependencies, installs GitPilot in user scope (`--user` outside virtualenv, or venv scope inside virtualenv), and repairs your User PATH.
+
+> **Bootstrap Note**: `gitpilot setup` is designed to bootstrap the GitPilot runtime itself on fresh machines. You do NOT need to manually set `PYTHONPATH` or manually install `watchdog` before running setup.
+
+This command inspects your Python environment, checks Git & Git identity, installs required runtime dependencies (using `sys.executable -m pip`), installs GitPilot in user scope (`--user` outside virtualenv, or venv scope inside virtualenv), and repairs your User PATH.
 
 ### 3. Verify Health
 ```bash
