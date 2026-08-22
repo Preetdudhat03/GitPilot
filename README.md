@@ -1,4 +1,4 @@
-# GitPilot V1.2
+# GitPilot V1.2 Intelligent Git Automation & Environment Recovery
 
 > A safety-first Git automation CLI that watches your repository, intelligently groups changes, creates meaningful commits, synchronizes with remote changes, and safely pushes your work.
 
